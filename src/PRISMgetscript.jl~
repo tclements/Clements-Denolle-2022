@@ -1,0 +1,14 @@
+using Dates
+
+base_url = "http://services.nacse.org/prism/data/public/4km/ppt"
+start = Date(2000,1,1)
+stop = Date(now())
+date_range = start:Day(1):stop
+
+for ii in eachindex(date_range)
+    daypath = joinpath(base_url,Dates.format(date_range[ii],"YYYYmmdd"))
+    println("Downloading day $(date_range[ii])")
+    command = `wget --content-disposition $daypath`
+    run(command)
+    sleep(1)
+end
