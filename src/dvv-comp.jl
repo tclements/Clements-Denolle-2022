@@ -5,8 +5,8 @@ using Glob
 using Statistics 
 
 ROOTDIR = "/media/FOUR/data/"
-DVVDIR = joinpath(ROOTDIR,"DVV-10-DAY")
-COMPDVV = joinpath(ROOTDIR,"DVV-10-DAY-COMP")
+DVVDIR = joinpath(ROOTDIR,"DVV-90-DAY")
+COMPDVV = joinpath(ROOTDIR,"DVV-90-DAY-COMP")
 if !isdir(COMPDVV)
     mkpath(COMPDVV)
 end
