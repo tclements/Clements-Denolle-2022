@@ -1,3 +1,7 @@
+# this script: 
+# 1. smooths single station autocorrelations over 90 days 
+# 2. computes dv/v using the stretching technique 
+
 using Distributed
 addprocs()
 
@@ -183,7 +187,7 @@ addprocs()
 
     # directories 
     ROOTDIR = "/media/FOUR/data/"
-    SCDIR = joinpath(ROOTDIR,"ONECORR")
+    SCDIR = joinpath(ROOTDIR,"CORR")
     NCDIR = joinpath(ROOTDIR,"NCCORR")
     DVVDIR = joinpath(ROOTDIR,"DVV-$dvvdays-DAY")
     if !isdir(DVVDIR)

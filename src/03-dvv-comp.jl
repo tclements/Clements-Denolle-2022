@@ -1,3 +1,7 @@
+# this script: 
+# 1. Combines EN, EZ, NZ, dv/v time series into a single time series using the 
+# method of Richter, 2014 
+
 using Arrow
 using DataFrames
 using Dates 

@@ -1,3 +1,8 @@
+# this script: 
+# 1. streams files from the scedc-pds public bucket in s3 to a compute instance on ec2 
+# 2. computes the single-station autocorrelation using SeisNoise.jl
+# 3. saves single-station autocorrelations in a bucket in s3
+
 using Distributed
 addprocs()
 
@@ -188,7 +193,7 @@ for ii = 1:length(stations)
 
     # upload to s3 
     for C in [C1,C2,C3]
-        path = "ONECORR/$(C.name)"
+        path = "CORR/$(C.name)"
         io = IOBuffer()
         serialize(io,C)
         s3_put(upload_bucket,path,io.data)

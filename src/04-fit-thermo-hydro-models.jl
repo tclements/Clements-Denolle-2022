@@ -1,3 +1,8 @@
+# this script: 
+# 1. Defines the five hydrology models 
+# 2. Defines the thermo-elastic model 
+# 3. fits a combined thermo+hydro-elastic/poroelastic model to each dv/v time series 
+
 using Arrow 
 using CSV
 using DataFrames 
