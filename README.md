@@ -25,6 +25,8 @@ Code for replication of Clements &amp; Denolle, 2022
 2. src/bil2netcdf.jl: Converts PRISM .bil files to single netCDF file 
 3. src/LJR-psd.jl: Calculates daily power spectral density for station CI.LJR 
 3. src/ridgecrest-pgv.jl: Calculates peak ground velcity (PGV) for Ridgecrest earthquake
+4. src/make-dispersion.py: Calculate dispersion using Community Velocity Model and 
+    Computer Programs in Seismology
 
 ## Files to produce supplementary figures 
 1. src/plot_CASTAC.jl: Plots groundwater levels in the Castac valley

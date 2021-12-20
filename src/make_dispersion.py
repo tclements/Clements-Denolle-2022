@@ -134,7 +134,7 @@ if __name__ == "__main__":
     # change this to where the cvm model of your choice is installed on your machine
     # if having trouble installing the cvm on your machine
     # we recommend using http://moho.scec.org/UCVM_web/web/viewer.php
-    cvm='/Users/thclements/CVM-SI/model/cvmsi/'
+    cvm='/Users/thclements/CVM-SI/model/cvmh/'
 
     # get dispersion for any station 
     station = "LJR"
