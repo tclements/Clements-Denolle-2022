@@ -20,12 +20,12 @@ Code for replication of Clements &amp; Denolle, 2022
 8. src/12-plot-figure-8.jl: Plot dv/v and PGV for Ridgecrest earthquake
 
 ## Files for getting/producing data  
-
-1. src/PRISMgetscript.jl: Downloads the PRISM dataset
-2. src/bil2netcdf.jl: Converts PRISM .bil files to single netCDF file 
-3. src/LJR-psd.jl: Calculates daily power spectral density for station CI.LJR 
-3. src/ridgecrest-pgv.jl: Calculates peak ground velcity (PGV) for Ridgecrest earthquake
-4. src/make-dispersion.py: Calculate dispersion using Community Velocity Model and 
+1. src/download_zenodo.jl: Downloads data from Zenodo for reproducing figures. Run this before script before running figure scripts. 
+2. src/PRISMgetscript.jl: Downloads the PRISM dataset
+3. src/bil2netcdf.jl: Converts PRISM .bil files to single netCDF file 
+4. src/LJR-psd.jl: Calculates daily power spectral density for station CI.LJR 
+5. src/ridgecrest-pgv.jl: Calculates peak ground velcity (PGV) for Ridgecrest earthquake
+6. src/make-dispersion.py: Calculate dispersion using Community Velocity Model and 
     Computer Programs in Seismology
 
 ## Files to produce supplementary figures 
