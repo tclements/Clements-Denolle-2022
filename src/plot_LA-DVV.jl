@@ -72,7 +72,7 @@ responsetype = Lowpass(0.01,fs=1.)
 designmethod = Butterworth(4)
 
 # load fitting DataFrame 
-fitdf = Arrow.Table("/media/FOUR/data/hydro-model-90-day.arrow") |> Arrow.columntable |> DataFrame
+fitdf = Arrow.Table(joinpath(@__DIR__,"../data/hydro-model-90-day.arrow")) |> Arrow.columntable |> DataFrame
 
 # constants for models 
 r = 500.
@@ -82,7 +82,7 @@ r = 500.
 
 
 # load precip data 
-filename = "/media/FOUR/data/ppt.nc"
+filename = joinpath(@__DIR__,"../data/ppt.nc")
 pptlon = ncread(filename,"lon")
 pptlat = ncread(filename,"lat")
 tppt = ncread(filename,"t")
@@ -91,15 +91,15 @@ ppt = ncread(filename,"ppt")
 tpptday = (tppt .- tppt[1]) ./ Day(1)
 
 # load tmean data 
-filename = "/media/FOUR/data/tmean.nc"
+filename = joinpath(@__DIR__,"../data/tmean.nc")
 tmean = ncread(filename,"tmean")
 ttmean = ncread(filename,"t")
 ttmean = Date.(Dates.unix2datetime.(ttmean))
 ttmeanday = (ttmean .- ttmean[1]) ./ Day(1)
 
 # load files 
-LA1 = CSV.File("/home/timclements/CALI/LA-stations-1.txt",delim="|") |> DataFrame
-LA2 = CSV.File("/home/timclements/CALI/LA-stations-2.txt",delim="|") |> DataFrame
+LA1 = CSV.File(joinpath(@__DIR__,"../data/LA-stations-1.txt"),delim="|") |> DataFrame
+LA2 = CSV.File(joinpath(@__DIR__,"../data/LA-stations-2.txt"),delim="|") |> DataFrame
 LA = vcat(LA1,LA2)
 LA[:,:NETSTA] = LA[:,:Network] .* "." .* LA[:,:Station]
 sort!(LA,:NETSTA)
@@ -114,7 +114,7 @@ LAminlon = round(LAminlon + (-0.5 - LAminlon % 0.5),digits=2)
 LAmaxlon = ceil(LAmaxlon)
 
 # load dv/v data 
-DVVDIR = "/media/FOUR/data/DVV-90-DAY-COMP/2.0-4.0"
+DVVDIR = joinpath(@__DIR__,"../data/DVV-90-DAY-COMP/2.0-4.0")
 files = glob("*",DVVDIR)
 LAfiles = [f for f in files if in(replace(basename(f),".arrow"=>""),LA[:,:NETSTA])]
 LA[:,:FILES] = LAfiles
@@ -135,13 +135,13 @@ LA1 = LA1[ind1,:]
 LA2 = LA2[ind2,:]
 
 # load GPS + InSAR data 
-IGdf = CSV.File("/media/FOUR/data/Shen-2020-InSar-GPS.txt",delim=" ",ignorerepeated=true) |> DataFrame
+IGdf = CSV.File(joinpath(@__DIR__,"../data/Shen-2020-InSar-GPS.txt"),delim=" ",ignorerepeated=true) |> DataFrame
 
 # load GPS only data 
-GPSdf = CSV.File("/media/FOUR/data/Shen-2020-GPS.txt",delim=" ",ignorerepeated=true) |> DataFrame
+GPSdf = CSV.File(joinpath(@__DIR__,"../data/Shen-2020-GPS.txt"),delim=" ",ignorerepeated=true) |> DataFrame
 
 # load GPS only data 
-GPSdf = CSV.File("/media/FOUR/data/dispUgrid_20210625.dat",delim="\t",ignorerepeated=true,header=[:long,:lat,:Vu,:dVu]) |> DataFrame
+GPSdf = CSV.File(joinpath(@__DIR__,"../data/dispUgrid_20210625.dat"),delim="\t",ignorerepeated=true,header=[:long,:lat,:Vu,:dVu]) |> DataFrame
 
 # interpolate InSAR + GPS onto standard grid 
 spacing = 0.02
@@ -229,7 +229,7 @@ GMT.text!(
         LA[:,:NETSTA],
     ),
     show=true,
-    savefig="/media/FOUR/data/FINAL-FIGURES/LA-map.png",
+    savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/LA-map.png"),
 )
 
 
@@ -352,7 +352,7 @@ Plots.yticks!(p3,(10:10:10*size(LA2,1),LA2[:,:NETSTA]))
 
 l1 = Plots.@layout [a b]
 Plots.plot(p2,p3,layout=l1,size=(600,800),dpi=500)
-Plots.savefig("/media/FOUR/data/FINAL-FIGURES/LA-dvv.png")
+Plots.savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/LA-dvv.png"))
 
 # plot dv/v & Elastic Component in LA 
 Xticks = Date(2006):Year(2):Date(2021)
@@ -530,7 +530,7 @@ Plots.yticks!(p3,(10:10:10*size(LA2,1),LA2[:,:NETSTA]))
 
 l1 = Plots.@layout [a b]
 Plots.plot(p2,p3,layout=l1,size=(600,800),dpi=500)
-Plots.savefig("/media/FOUR/data/FINAL-FIGURES/LA-dvv-elastic.png")
+Plots.savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/LA-dvv-elastic.png"))
 
 # plot dv/v & temp Component in LA 
 Xticks = Date(2006):Year(2):Date(2021)
@@ -711,7 +711,7 @@ Plots.yticks!(p3,(10:10:10*size(LA2,1),LA2[:,:NETSTA]))
 
 l1 = Plots.@layout [a b]
 Plots.plot(p2,p3,layout=l1,size=(600,800),dpi=500)
-Plots.savefig("/media/FOUR/data/FINAL-FIGURES/LA-dvv-temp.png")
+Plots.savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/LA-dvv-temp.png"))
 
 
 # plot dv/v & residual Component in LA 
@@ -924,7 +924,7 @@ Plots.yticks!(p3,(10:10:10*size(LA2,1),LA2[:,:NETSTA]))
 
 l1 = Plots.@layout [a b]
 Plots.plot(p2,p3,layout=l1,size=(600,800),dpi=500)
-Plots.savefig("/media/FOUR/data/FINAL-FIGURES/LA-dvv-residual.png")
+Plots.savefig(joinpath(@__DIR,"../data/FINAL-FIGURES/LA-dvv-residual.png"))
 
 
 # plot dv/v with CDMk 
@@ -1154,4 +1154,4 @@ Plots.yticks!(p3,(10:10:10*size(LA2,1),LA2[:,:NETSTA]))
 
 l1 = Plots.@layout [a b]
 Plots.plot(p2,p3,layout=l1,size=(600,800),dpi=500)
-Plots.savefig("/media/FOUR/data/FINAL-FIGURES/LA-dvv-fit.png")
+Plots.savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/LA-dvv-fit.png"))

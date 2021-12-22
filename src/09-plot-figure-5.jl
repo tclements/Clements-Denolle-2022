@@ -40,13 +40,13 @@ function smooth_withfiltfilt(A::AbstractArray; window_len::Int=11, window::Symbo
 end
 
 #load station locations 
-NCdf = DataFrame(CSV.File("/home/timclements/CALI/NCstations.csv"))
-SCdf = DataFrame(CSV.File("/home/timclements/CALI/CIstations.csv"))
+NCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/NCstations.csv")))
+SCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/CIstations.csv")))
 CAdf = vcat(NCdf, SCdf)
 
 # load GRACE data 
 # from http://www2.csr.utexas.edu/grace/RL06_mascons.html
-filename = "/media/FOUR/data/CSR_GRACE_GRACE-FO_RL06_Mascons_all-corrections_v02.nc"
+filename = joinpath(@__DIR__,"../data/CSR_GRACE_GRACE-FO_RL06_Mascons_all-corrections_v02.nc")
 tlwe = Date(2002,1,1) .+ Day.(floor.(ncread(filename,"time")))
 lon = ncread(filename,"lon")
 lat = ncread(filename,"lat")
@@ -65,10 +65,10 @@ G2016 = gmtread(filename,layer=ind2016,varname="lwe_thickness")
 G2020 = gmtread(filename,layer=ind2020,varname="lwe_thickness")
 
 # load fitted values 
-fitdf = Arrow.Table("/media/FOUR/data/hydro-model-90-day.arrow") |> Arrow.columntable |> DataFrame
+fitdf = Arrow.Table(joinpath(@__DIR__,"../data/hydro-model-90-day.arrow")) |> Arrow.columntable |> DataFrame
 
 # load temperature values 
-filename = "/media/FOUR/data/tmean.nc"
+filename = joinpath(@__DIR__,"../data/tmean.nc")
 pptlon = ncread(filename,"lon")
 pptlat = ncread(filename,"lat")
 tmean = ncread(filename,"tmean")
@@ -84,7 +84,7 @@ freqmax = 4.0
 maxgap = 15 # maximum data gap [days]
 mindays = 100 # minimum number of days needed for analysis 
 gray = makecpt(color=150, range=(-10000,10000), no_bg=:true);
-arrowfiles = glob("*","/media/FOUR/data/DVV-90-DAY-COMP/$freqmin-$freqmax/")
+arrowfiles = glob("*",joinpath(@__DIR__,"../data/DVV-90-DAY-COMP/$freqmin-$freqmax/"))
 ΔDVVdf = DataFrame()
 
 for jj in 1:length(arrowfiles)
@@ -216,13 +216,13 @@ GMT.colorbar!(
     pos=(anchor=:BL, horizontal=true,offset=(-5.5,-2),move_annot=true,length=5), 
     W=-1,
     show=1,
-    savefig="/media/FOUR/data/FINAL-FIGURES/DVV-2004-2005-$freqmin-$freqmax.png",
+    savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/DVV-2004-2005-$freqmin-$freqmax.png"),
 )
 
 # 2012 - 2016 
 maxgap = 180 # maximum data gap [days]
 mindays = 3 * 365 # minimum number of days needed for analysis 
-arrowfiles = glob("*","/media/FOUR/data/DVV-90-DAY-COMP/$freqmin-$freqmax/")
+arrowfiles = glob("*",joinpath(@__DIR__,"../data/DVV-90-DAY-COMP/$freqmin-$freqmax/"))
 ΔDVVdf = DataFrame()
 
 for jj in 1:length(arrowfiles)
@@ -356,14 +356,14 @@ GMT.colorbar!(
     pos=(anchor=:BL, horizontal=true,offset=(-5.5,-2),move_annot=true,length=5), 
     W=-1,
     show=1,
-    savefig="/media/FOUR/data/FINAL-FIGURES/DVV-2011-2016-$freqmin-$freqmax.png",
+    savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/DVV-2011-2016-$freqmin-$freqmax.png"),
 )
 
 # 2005 - 2020
 maxgap = 2*365 # maximum data gap [days]
 mindays = 13 * 365 # minimum number of days needed for analysis 
 
-arrowfiles = glob("*","/media/FOUR/data/DVV-90-DAY-COMP/$freqmin-$freqmax/")
+arrowfiles = glob("*",joinpath(@__DIR__,"../data/DVV-90-DAY-COMP/$freqmin-$freqmax/"))
 ΔDVVdf = DataFrame()
 
 for jj in 1:length(arrowfiles)
@@ -494,13 +494,13 @@ GMT.colorbar!(
     pos=(anchor=:BL, horizontal=true,offset=(-5.5,-2),move_annot=true,length=5), 
     W=-1,
     show=1,
-    savefig="/media/FOUR/data/FINAL-FIGURES/DVV-2005-2020-$freqmin-$freqmax.png",
+    savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/DVV-2005-2020-$freqmin-$freqmax.png"),
 )
 
 # Ridgecrest 
 maxgap = 4 # maximum data gap [days]
 mindays = 6 # minimum number of days needed for analysis 
-arrowfiles = glob("*","/media/FOUR/data/DVV-10-DAY-COMP/$freqmin-$freqmax/")
+arrowfiles = glob("*",joinpath(@__DIR__,"../data/DVV-10-DAY-COMP/$freqmin-$freqmax/"))
 ΔDVVdf = DataFrame()
 
 for jj in 1:length(arrowfiles)
@@ -659,5 +659,5 @@ GMT.psmeca!(
     fill=:red, 
     show=true,
     fmt=:png,
-    savefig="/media/FOUR/data/FINAL-FIGURES/DVV-Ridgecrest-$freqmin-$freqmax.png",
+    savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/DVV-Ridgecrest-$freqmin-$freqmax.png"),
 )

@@ -30,13 +30,13 @@ end
 
 #### PRECIP #####
 # get PRISM data and sort by date 
-PRISM = "/media/FOUR/data/PRISMPPT/"
+PRISM = joinpath(@__DIR__,"../data/PRISMPPT/")
 filedirs = glob("*",PRISM)
 days = [split(basename(f),"_")[5] for f in filedirs]
 ind = sortperm(days)
 filedirs = filedirs[ind]
 N = length(filedirs)
-filename = "/media/FOUR/data/ppt.nc"
+filename = joinpath(@__DIR__,"../data/ppt.nc")
 isfile(filename) && rm(filename)
 varname = "ppt"
 all_data = zeros(287,288,N)
@@ -80,7 +80,7 @@ ncwrite(all_data,filename,varname)
 
 #### TEMP #####
 # get PRISM data and sort by date 
-PRISM = "/media/FOUR/data/PRISMTMEAN/"
+PRISM = joinpath(@__DIR__,"../data/PRISMTMEAN/")
 filedirs = glob("*",PRISM)
 days = [split(basename(f),"_")[5] for f in filedirs]
 ind = sortperm(days)
@@ -91,7 +91,7 @@ dayind = findfirst(days .== "19990101")
 days = days[dayind:end]
 filedirs = filedirs[dayind:end]
 N = length(filedirs)
-filename = "/media/FOUR/data/tmean.nc"
+filename = joinpath(@__DIR__,"../data/tmean.nc")
 isfile(filename) && rm(filename)
 varname = "tmean"
 all_data = zeros(287,288,N)

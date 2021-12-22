@@ -5,13 +5,13 @@ using Dates
 using Glob 
 using GMT 
 
-NCdf = DataFrame(CSV.File("/home/timclements/CALI/NCstations.csv"))
-SCdf = DataFrame(CSV.File("/home/timclements/CALI/CIstations.csv"))
+NCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/NCstations.csv")))
+SCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/CIstations.csv")))
 CAdf = vcat(NCdf, SCdf)
 CAdf[:,:NETSTA] = CAdf[:,:Network] .* "." .* CAdf[:,:Station]
 
 # grab number of days per netsta 
-dvvfiles = glob("*","/media/FOUR/data/DVV-90-DAY-COMP/2.0-4.0/")
+dvvfiles = glob("*",joinpath(@__DIR__,"../data/DVV-90-DAY-COMP/2.0-4.0/"))
 N = length(dvvfiles)
 DVVdf = DataFrame()
 netstas = Array{String}(undef,N)
@@ -58,6 +58,6 @@ GMT.colorbar!(
     pos=(anchor=:BL,horizontal=true,offset=(-7.5,-1.75),length=6),
     show=true,
     fmt=:png,
-    savefig="/media/FOUR/data/FINAL-FIGURES/CA-station-map.png",
+    savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/CA-station-map.png"),
 )
     

@@ -15,7 +15,7 @@ LAminlat = 33.6
 LAmaxlat = 34.52 
 
 # load dv/v 
-fitdf = Arrow.Table("/media/FOUR/data/hydro-model-90-day.arrow") |> Arrow.columntable |> DataFrame
+fitdf = Arrow.Table(joinpath(@__DIR__,"../data/hydro-model-90-day.arrow")) |> Arrow.columntable |> DataFrame
 minlon = floor(minimum(fitdf[:,:LON]))
 maxlon = ceil(maximum(fitdf[:,:LON]))
 minlat = floor(minimum(fitdf[:,:LAT]))
@@ -23,7 +23,7 @@ maxlat = ceil(maximum(fitdf[:,:LAT])) - 0.75
 
 # add VS30 values to PGV 
 # load VS30 data from USGS https://earthquake.usgs.gov/data/vs30/
-ds = ArchGDAL.readraster("/media/FOUR/data/VS30/global_vs30.tif")
+ds = ArchGDAL.readraster(joinpath(@__DIR__,"../data/VS30/global_vs30.tif"))
 geotransform = ArchGDAL.getgeotransform(ds)
 vs30lon = range(geotransform[1],step=geotransform[2],length=ds.size[1])
 vs30lat = range(geotransform[4],step=geotransform[6],length=ds.size[2])
@@ -69,7 +69,7 @@ GMT.scatter!(
     markeredgecolor=:black,
     show=true,
     fmt=:png,
-    savefig="/media/FOUR/data/FINAL-FIGURES/CI-station-map.png",
+    savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/CI-station-map.png"),
 )
 
 # show fitted dv/v and diffusion coefficient 
@@ -99,7 +99,8 @@ GMT.scatter!(
     cmap=hotmap,
     show=false,
 )
-GMT.colorbar!(cmap=hotmap,log=true,show=true,savefig="/media/FOUR/data/FINAL-FIGURES/SSW-Decay.png",)
+GMT.colorbar!(cmap=hotmap,log=true,show=true,savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/SSW-Decay.png"),
+)
 
 # show fitted dv/v and diffusion coefficient 
 Eind = findall((fitdf[:,:corE] .> 0.5) .& (fitdf[:,:E3] .< 10.))
@@ -128,7 +129,12 @@ GMT.scatter!(
     cmap=hotmap,
     show=false,
 )
-GMT.colorbar!(cmap=hotmap,log=true,show=true,savefig="/media/FOUR/data/FINAL-FIGURES/Elastic-Diffusivity.png",)
+GMT.colorbar!(
+    cmap=hotmap,
+    log=true,
+    show=true,
+    savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/Elastic-Diffusivity.png"),
+)
 
 # plot temperature delay 
 tempmap = GMT.makecpt(range=(0,180,20),cmap=:hot)
@@ -155,7 +161,7 @@ GMT.scatter!(
     colorbar=true,
     cmap=:hot,
     show=true,
-    savefig="/media/FOUR/data/FINAL-FIGURES/Elastic-Temp.png",
+    savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/Elastic-Temp.png"),
 )
 
 # plot SSW temp delay 
@@ -182,7 +188,7 @@ GMT.scatter!(
     colorbar=true,
     cmap=:hot,
     show=true,
-    savefig="/media/FOUR/data/FINAL-FIGURES/SSW-Temp.png",
+    savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/SSW-Temp.png"),
 )
 
 # scatter ratio of hydro to temperature 
@@ -273,5 +279,5 @@ GMT.scatter!(
     alpha=0,
     show=true,
     markersize="7p",
-    savefig="/media/FOUR/data/FINAL-FIGURES/Hydro-Thermal-Mixing-map.png",
+    savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/Hydro-Thermal-Mixing-map.png"),
 )

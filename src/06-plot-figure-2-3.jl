@@ -99,7 +99,7 @@ end
 
 
 # read CI.LJR dv/v
-LJR = Arrow.Table("/media/FOUR/data/DVV-90-DAY-COMP/2.0-4.0/CI.LJR.arrow") |> DataFrame
+LJR = Arrow.Table(joinpath(@__DIR__,"../data/DVV-90-DAY-COMP/2.0-4.0/CI.LJR.arrow")) |> DataFrame
 mindate = Date(2000)
 
 # remove days with instrument problems 
@@ -107,18 +107,18 @@ ind = findall(LJR[:,:CC] .>= 0.875)
 LJR = LJR[ind,:]
 
 # read nearest groundwater well and convert to m 
-GWL = CSV.File("/media/FOUR/data/344614118454101.tsv",comment="#",skipto=3) |> DataFrame
+GWL = CSV.File(joinpath(@__DIR__,"../data/344614118454101.tsv"),comment="#",skipto=3) |> DataFrame
 dropmissing!(GWL,:lev_va) # lev_va is ft below surface
 GWL[!,:lev_va] ./= 3.28 # convert to meters 
 GWL = GWL[GWL[!,:lev_dt] .>= mindate,:]
 GWL[!,:lev_va] .*= -1
 GWL[:,:lev_va] .-= mean(GWL[:,:lev_va])
-MW1 = CSV.File("/media/FOUR/data/TRC-MW1.csv",dateformat="Y/m/d") |> DataFrame
+MW1 = CSV.File(joinpath(@__DIR__,"../data/TRC-MW1.csv"),dateformat="Y/m/d") |> DataFrame
 MW1[:,:GWL] .-= mean(MW1[:,:GWL])
 MW1[:,:GWL] ./= 3.28
 
 # get LJR lat, lon from CI station locations 
-cistations = DataFrame(CSV.File("/home/timclements/CALI/CIstations.csv"))
+cistations = DataFrame(CSV.File(joinpath(@__DIR__,"../data/CIstations.csv")))
 LJRind = findfirst(cistations[!,:Station] .== "LJR")
 LJRlat = cistations[LJRind,:Latitude]
 LJRlon = cistations[LJRind,:Longitude]
@@ -126,7 +126,7 @@ LJRlon = cistations[LJRind,:Longitude]
 # get LJRN GPS data  
 WNAMloc = DataFrame(
     CSV.File(
-        "/media/FOUR/data/WNAM-LOC.tsv",
+        joinpath(@__DIR__,"../data/WNAM-LOC.tsv"),
         delim=' ',
         ignorerepeated=true,
     )
@@ -136,7 +136,7 @@ LJRNlon = WNAMloc[LJRNind,:LON]
 LJRNlat = WNAMloc[LJRNind,:LAT]
 GPS = DataFrame(
     CSV.File(
-        "/media/FOUR/data/WNAMdetrend/ljrnFilterDetrend.neu", 
+        joinpath(@__DIR__,"../data/WNAMdetrend/ljrnFilterDetrend.neu"), 
         comment="#",
         header=[
             "DECDATE",
@@ -166,14 +166,14 @@ smooth!(GPS,:N,interval=Day(30))
 
 # load GRACE data 
 # from http://www2.csr.utexas.edu/grace/RL06_mascons.html
-filename = "/media/FOUR/data/GRACE-LJR.nc"
+filename = joinpath(@__DIR__,"../data/GRACE-LJR.nc")
 lwe = ncread(filename,"lwe_thickness")[1,1,:]
 tlwe = Date(2002,1,1) .+ Day.(floor.(ncread(filename,"time")))
 lwe .-= mean(lwe) # change baseline to entire signal 
 lwe ./= 100 # convert to m 
 
 # load precip data
-filename = "/media/FOUR/data/PRECIP-LJR.nc"
+filename = joinpath(@__DIR__,"../data/PRECIP-LJR.nc")
 t = ncread(filename,"t")
 tppt = Date.(Dates.unix2datetime.(t))
 precip = ncread(filename,"ppt")[1,1,:]
@@ -478,8 +478,7 @@ plot!(
     xticks = (LJRticks, Dates.format.(LJRticks,"yyyy")),
     xrot=60,
 )
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-DVV.svg")
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-DVV.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CILJR-DVV.png"))
 
 ##### DV/V - GRACE #####
 # plot dv/v and GRACE
@@ -544,8 +543,7 @@ plot!(
     xticks = (LJRticks, Dates.format.(LJRticks,"yyyy")),
     xrot=60,
 )
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-GRACE-DVV.svg")
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-GRACE-DVV.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CILJR-GRACE-DVV.png"))
 
 ##### DV/V - Fully Coupled #####
 scatter(
@@ -618,8 +616,7 @@ plot!(
     # yforeground_color_axis=:dodgerblue2,
     # grid=false,
 )
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-FC-MODELS.svg")
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-FC-MODELS.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CILJR-FC-MODELS.png"))
 
 ##### DV/V - CDM #####
 scatter(
@@ -692,8 +689,7 @@ plot!(
     # yforeground_color_axis=:dodgerblue2,
     # grid=false,
 )
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-MODELS.svg")
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-MODELS.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CILJR-MODELS.png"))
 
 # hysteresis for two time periods 
 scatter(
@@ -713,7 +709,7 @@ scatter(
 )
 annotate!((-0.49,-0.22,text("Drought",14,:left,:top,:indianred)))
 annotate!((0.07,0.18,text("High groundwater\n         level",14,:left,:top,:dodgerblue)))
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-DVV-CDM-HYST-1")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CILJR-DVV-CDM-HYST-1"))
 
 scatter(
     LJR[:,:DVV][3993:end-100],
@@ -732,7 +728,7 @@ scatter(
 )
 annotate!((0.24,0.12,text("   Increasing\n groundwater\n        level",14,:left,:top,:dodgerblue)))
 annotate!((-0.49,-0.22,text("Drought",14,:left,:top,:indianred)))
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-DVV-CDM-HYST-2")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CILJR-DVV-CDM-HYST-2"))
 
 # plot predicted dv/v 
 scatter(
@@ -773,8 +769,7 @@ plot!(
     # ylabel="Cumulative Deviation of\n Precipitation from Mean [m]",
     label="Predicted dv/v",
 )
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-PREDICT-DVV.svg")
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-PREDICT-DVV.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CILJR-PREDICT-DVV.png"))
 
 # plot dvv vs precip 
 startdate = (LJR[1,:DATE] - Date(year(LJR[1,:DATE]))).value / 365.25 + year(LJR[1,:DATE])
@@ -802,8 +797,7 @@ plot!(
     linestyle=:dash,
     label="Linear Model",
 )
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-HYST.svg")
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-HYST.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CILJR-HYST.png"))
 
 # plot predicted dv/v and hysteresis 
 p1 = scatter(
@@ -867,8 +861,7 @@ plot!(
 )
 l = @layout [a b]
 plot(p1,p2,layout=l,size=(800,300),margin=5mm)
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-DVV-HYST.svg")
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-DVV-HYST.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CILJR-DVV-HYST.png"))
 
 # plot predicted groundwater 
 cs = palette(:Reds_3,6)
@@ -913,8 +906,7 @@ plot!(
     xrot=60,
 )
 display(p)
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-PREDICT-GWL.svg")
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-PREDICT-GWL.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CILJR-PREDICT-GWL.png"))
 
 #### plot groundwater and GRACE ####
 plot(
@@ -967,7 +959,7 @@ plot!(
     xticks = (LJRticks, Dates.format.(LJRticks,"yyyy")),
     xrot=60,
 )
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-GRACE-GWL.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CILJR-GRACE-GWL.png"))
 
 ## plot dv/v + GWL ## 
 scatter(
@@ -1015,10 +1007,10 @@ plot!(
     xticks = (LJRticks, Dates.format.(LJRticks,"yyyy")),
     xrot=60,
 )
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-MW1.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CILJR-MW1.png"))
 
 #### plot autocorrletion for LJR ####
-NZ = deserialize("/media/FOUR/data/ONECORR/CI.LJR..BHN.CI.LJR..BHZ")
+NZ = deserialize(joinpath(@__DIR__,"../data/ONECORR/CI.LJR..BHN.CI.LJR..BHZ"))
 remove_nan!(NZ)
 ind = setdiff(1:length(NZ.t),5297:5359)
 NZ = NZ[ind]
@@ -1027,7 +1019,7 @@ SeisNoise.smooth!(NZ,Day(10))
 # abs_max!(C)
 
 # load PSD data 
-@load "/media/FOUR/data/LJR-psd.jld2" psd tpsd fpsd
+@load joinpath(@__DIR__,"../data/LJR-psd.jld2") psd tpsd fpsd
 psd_range = tpsd[1] : Day(1) : tpsd[end]
 PSD = zeros(eltype(psd),size(psd,1),size(psd_range,1))
 psdind = findall(in(tpsd),psd_range)
@@ -1136,12 +1128,11 @@ plot(p1,p2,layout = grid(2,1,heights=[0.5,0.5]),
     dpi=500,
     size=(800,600),
 )
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-CORR.svg")
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-CORR.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CILJR-CORR.png"))
 
 ## MAP + DVV  
 # load the map from GMT 
-img = load("/media/FOUR/data/FINAL-FIGURES/LJR-map.png")
+img = load(joinpath(@__DIR__,"../data/FINAL-FIGURES/LJR-map.png"))
 p1 = plot(img,border=:none,dpi=250,margins = -2Plots.cm)
 annotate!((-100,100,text("A",20)))
 
@@ -1270,10 +1261,10 @@ plot!(
 )
 l1 = @layout [a b{0.6w}]
 plot(p1,p2,layout=l1,size=(1200,400),dpi=500)
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-MAP-DVV.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CILJR-MAP-DVV.png"))
  
 
-#### SCIENCE FIGURE #### 
+#### MULTI-FIGURE #### 
 p1 = heatmap(
     psd_range,
     fpsd, 
@@ -1464,57 +1455,10 @@ plot!(
 #     size=(800,800),
 # )
 # load the map from GMT 
-img = load("/media/FOUR/data/FINAL-FIGURES/LJR-map.png")
+img = load(joinpath(@__DIR__,"../data/FINAL-FIGURES/LJR-map.png"))
 p4 = plot(img,border=:none)
 annotate!((-100,100,text("A",20)))
 
 l1 = @layout [ [a [b{0.95w,0.5h}; c{0.9w, 0.5h}]]; d{1.0w, 0.5h}]
 plot(p4,p1,p2,p3,layout=l1,size=(1600,1600),dpi=250)
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-ALL.png")
-
-# plot just ΔQ_c^{-1} and CDM 
-plot(
-    tppt[dvvprecipind], 
-    CDMabove, 
-    fillrange=0,
-    fillalpha = 0.35, 
-    c = :dodgerblue, 
-    label = "",
-    ylabel="Cumulative Deviation of\n Precipitation from Moving Mean [m]",
-    xlims=(LJR[1,:DATE],LJR[end,:DATE]),
-    yguidefontcolor=:dodgerblue,
-    ytickfont=font(10,:dodgerblue),
-    ytick_direction=:out,
-    yforeground_color_axis=:dodgerblue,
-    right_margin = 2.5cm,
-    left_margin = 2.5cm,
-    bottom_margin=1cm,
-    dpi=500,
-    size=(1200,400),
-    xticks = (LJRticks, Dates.format.(LJRticks,"yyyy")),
-    xrot=60,
-)
-plot!(
-    tppt[dvvprecipind], 
-    CDMbelow, 
-    fillrange=0,
-    fillalpha = 0.35, 
-    c = :indianred, 
-    label = "",
-    xlims=(LJR[1,:DATE],LJR[end,:DATE]),
-)
-plot!(
-    twinx(),
-    DQQ[!,:DATE],
-    (DQQ[!,:EZNEGQCINV] .+ DQQ[!,:ENNEGQCINV]) ./ 2,
-    label="",
-    linecolor=:black,
-    linewidth=2.5,
-    xlims=(LJR[1,:DATE],LJR[end,:DATE]),
-    ylabel=L"\Delta Q_c^{-1}",
-    ytick_direction=:out,
-    grid=false,
-    xticks = (LJRticks, Dates.format.(LJRticks,"yyyy")),
-    xrot=60,
-)
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-DQ-CDM.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CILJR-ALL.png"))

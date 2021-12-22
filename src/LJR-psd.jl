@@ -95,7 +95,7 @@ addprocs()
     responsefreq = 0.4
 
     # gather files 
-    files = glob("*/*/*","/media/FOUR/data/continuous_waveforms/")
+    files = glob("*/*/*",joinpath(@__DIR__,"../data/continuous_waveforms/"))
     files = [f for f in files if occursin("LJR__BHZ",f)]
 
     # filter based on file sizes
@@ -164,4 +164,4 @@ psd = smoothPSD
 fpsd = fsmooth 
 
 # save to JLD2 
-@save "/media/FOUR/data/LJR-psd.jld2" psd tpsd fpsd
+@save joinpath(@__DIR__,"../data/LJR-psd.jld2") psd tpsd fpsd
