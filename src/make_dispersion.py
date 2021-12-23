@@ -120,7 +120,7 @@ def run_surf96(OUT):
     return None   
 
 if __name__ == "__main__":
-    stadf = pd.read_csv("/home/timclements/CALI/CIstations.csv")
+    stadf = pd.read_csv(os.path.join(os.path.dirname(__file__), "../data/CIstations.csv"))
     step = 50
     min_depth, max_depth = 0, 4050
     wave = 'R'
@@ -128,13 +128,13 @@ if __name__ == "__main__":
     dispersion = 3.0
 
     # output directory 
-    OUT = '/media/FOUR/data/DISPERSION'
+    OUT = os.path.join(os.path.dirname(__file__),"../data/DISPERSION")
 
     # community velocity model 
     # change this to where the cvm model of your choice is installed on your machine
     # if having trouble installing the cvm on your machine
     # we recommend using http://moho.scec.org/UCVM_web/web/viewer.php
-    cvm='/Users/thclements/CVM-SI/model/cvmh/'
+    cvm='/path/to/model/cvmh/'
 
     # get dispersion for any station 
     station = "LJR"

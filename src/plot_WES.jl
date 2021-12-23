@@ -24,11 +24,11 @@ function smooth_withfiltfilt(A::AbstractArray; window_len::Int=11, window::Symbo
 end
 
 # read data from CI.WES 
-WES = Arrow.Table("/media/FOUR/data/FIT-DVV-SSE/90-DAY/CI.WES.arrow") |> DataFrame
+WES = Arrow.Table(joinpath(@__DIR__,"../data/FIT-DVV-SSE/90-DAY/CI.WES.arrow")) |> DataFrame
 
 # get WES lat, lon from CI station locations 
-SCdf = DataFrame(CSV.File("/home/timclements/CALI/CIstations.csv"))
-NCdf = DataFrame(CSV.File("/home/timclements/CALI/NCstations.csv"))
+SCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/CIstations.csv")))
+NCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/NCstations.csv")))
 CAdf = vcat(NCdf, SCdf)
 CAdf = CAdf[CAdf[:,:StartTime] .< Date(2010,4,4),:]
 CAdf = CAdf[CAdf[:,:EndTime] .> Date(2010,4,4),:]
@@ -50,7 +50,7 @@ EQlat = 32.286
 # load EQ locations 
 EQ = DataFrame(
     CSV.File(
-    "/media/FOUR/data/baja.txt",
+    joinpath(@__DIR__,"../data/baja.txt"),
     delim=" ",
     ignorerepeated=true,
     )
@@ -58,7 +58,7 @@ EQ = DataFrame(
 EQ = EQ[EQ[:,:MAG] .> 3.0,:]
 
 # find groundwater wells nearby 
-GWL = CSV.File("/media/FOUR/data/324603115480501.tsv",comment="#",skipto=3) |> DataFrame
+GWL = CSV.File(joinpath(@__DIR__,"../data/324603115480501.tsv"),comment="#",skipto=3) |> DataFrame
 dropmissing!(GWL,:lev_va) # lev_va is ft below surface
 GWL[!,:lev_va] ./= 3.28 # convert to meters 
 GWL = GWL[GWL[!,:lev_dt] .>= Date(2001),:]
@@ -67,7 +67,7 @@ GWL[!,:lev_va] .*= -1
 
 # read GPS data for station P494 
 GPS = CSV.File(
-    "/media/FOUR/data/WNAMdetrend/p494FilterDetrend.neu", 
+    joinpath(@__DIR__,"../data/WNAMdetrend/p494FilterDetrend.neu"), 
     comment="#",
     header=[
         "DATE",
@@ -93,7 +93,7 @@ smoothEN = smooth_withfiltfilt(sqrt.( (GPS[!,:E].^2 .+ GPS[!,:N] .^2) ./ 2),wind
 smoothEN .-= minimum(smoothEN)
 
 # read PGA from USGS https://earthquake.usgs.gov/earthquakes/eventpage/ci9108652/shakemap/intensity
-baja = h5open("/media/FOUR/data/Baja-EQ-shake.hdf","r") 
+baja = h5open(joinpath(@__DIR__,"../data/Baja-EQ-shake.hdf"),"r") 
 arrays = read(baja,"arrays")
 PGA = arrays["imts"]["GREATER_OF_TWO_HORIZONTAL"]["PGA"]["mean"]
 PGV = arrays["imts"]["GREATER_OF_TWO_HORIZONTAL"]["PGV"]["mean"]
@@ -158,7 +158,7 @@ GMT.basemap!(
     length="50k", units=true, offset=1.0),
 )
 GMT.psxy!(
-    "/media/FOUR/data/CFM/obj/traces/gmt/Baja_traces.lonLat",
+    joinpath(@__DIR__,"../data/CFM/obj/traces/gmt/Baja_traces.lonLat"),
     pen=1,
 )
 GMT.scatter!(
@@ -229,7 +229,7 @@ GMT.psmeca!(
         fill=:red, 
         show=true,
         fmt=:png,
-        savefig="/media/FOUR/data/FINAL-FIGURES/Baja-map.png",
+        savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/Baja-map.png"),
 )
 
 # fit model to dv/v decay 
@@ -441,44 +441,4 @@ plot!(
     ytickfont=font(10,:red),
     yforeground_color_axis=:red,
 )
-# plot!(
-#     GWL[!,:lev_dt], 
-#     GWL[!,:lev_va], 
-#     inset = (1, bbox(0.0, 0.1, 1.0, 0.4,:bottom,:left)), 
-#     subplot = 3,
-#     label = "",
-#     grid=:off,
-#     bg_inside = nothing,
-#     linewidth=2.5,
-#     ylabel="Groundwater Level\n w.r.t Surface [m]\n\n",
-#     alpha=0.9,
-#     left_margin = 5mm,
-#     yticks = (collect(-16 : 1 : -15.),["-16.0     ","-15.0     "]),
-#     yguidefontcolor=:dodgerblue,
-#     ytickfont=font(10,:dodgerblue),
-#     yforeground_color_axis=:dodgerblue,
-#     xtick=false,
-#     xlims=(WES[1,:DATE],WES[end,:DATE]),
-#     xaxis=false,
-#     ylims=(-16,-14.5),
-# )
-# scatter!(
-#     GWL[!,:lev_dt], 
-#     GWL[!,:lev_va], 
-#     inset = (1, bbox(0.0, 0.1, 1.0, 0.4,:bottom,:left)), 
-#     subplot = 4,
-#     label = "",
-#     grid=:off,
-#     bg_inside = nothing,
-#     left_margin = 5mm,
-#     markercolor=:deepskyblue,
-#     markerstrokecolor=:black,
-#     xtick=false,
-#     ytick=false,
-#     xlims=(WES[1,:DATE],WES[end,:DATE]),
-#     yaxis=false,
-#     xaxis=false,
-#     ylims=(-16,-14.5),
-# )
-savefig("/media/FOUR/data/FINAL-FIGURES/CIWES-DVV.svg")
-savefig("/media/FOUR/data/FINAL-FIGURES/CIWES-DVV.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CIWES-DVV.png"))

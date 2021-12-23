@@ -25,15 +25,15 @@ function smooth_withfiltfilt(A::AbstractArray; window_len::Int=11, window::Symbo
 end
 
 # get WES lat, lon from CI station locations 
-SCdf = DataFrame(CSV.File("/home/timclements/CALI/CIstations.csv"))
-NCdf = DataFrame(CSV.File("/home/timclements/CALI/NCstations.csv"))
+SCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/CIstations.csv")))
+NCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../NCstations.csv")))
 CAdf = vcat(NCdf, SCdf)
 CAdf = CAdf[findall(in(["WES","HEC","JRC2"]),CAdf[:,:Station]),:]
 
 PGVthresh = 10.0 # cm/s 
 
 # read PGV from USGS https://earthquake.usgs.gov/earthquakes/eventpage/ci9108652/shakemap/intensity
-baja = h5open("/media/FOUR/data/Baja-EQ-shake.hdf","r") 
+baja = h5open(joinpath(@__DIR__,"../data/Baja-EQ-shake.hdf"),"r") 
 arrays = read(baja,"arrays")
 PGVbaja = arrays["imts"]["GREATER_OF_TWO_HORIZONTAL"]["PGV"]["mean"]
 
@@ -59,7 +59,7 @@ bajalat = range(latmin,latmax,length=Nlat)
 GPGVbaja = GMT.mat2grid(PGVbaja,x=bajalon,y=bajalat)
 
 # read PGV from USGS https://earthquake.usgs.gov/earthquakes/eventpage/ci9108652/shakemap/intensity
-hec = h5open("/media/FOUR/data/Hector-Mine-EQ.hdf","r") 
+hec = h5open(joinpath(@__DIR__,"../data/Hector-Mine-EQ.hdf"),"r") 
 arrays = read(hec,"arrays")
 PGVhec = arrays["imts"]["GREATER_OF_TWO_HORIZONTAL"]["PGV"]["mean"]
 
@@ -85,7 +85,7 @@ heclat = range(latmin,latmax,length=Nlat)
 GPGVhec = GMT.mat2grid(PGVhec,x=heclon,y=heclat)
 
 # read PGV from USGS https://earthquake.usgs.gov/earthquakes/eventpage/ci9108652/shakemap/intensity
-rc = h5open("/media/FOUR/data/Ridgecrest-EQ.hdf","r") 
+rc = h5open(joinpath(@__DIR__,"../data/Ridgecrest-EQ.hdf"),"r") 
 arrays = read(rc,"arrays")
 PGVrc = arrays["imts"]["GREATER_OF_TWO_HORIZONTAL"]["PGV"]["mean"]
 
@@ -112,7 +112,7 @@ GPGVrc = GMT.mat2grid(PGVrc,x=rclon,y=rclat)
  
 # GPS locations 
 PBO = CSV.File(
-    "/media/FOUR/data/PBO.csv",
+    joinpath(@__DIR__,"../data/PBO.csv"),
 ) |> DataFrame
 PBO = PBO[findall(in(["P494","BEPK","LDSW"]),PBO[:,:pnum]),:]
 
@@ -131,7 +131,7 @@ rcEQlat = 35.77
 # load Baja Earthquake locations 
 bajaEQ = DataFrame(
     CSV.File(
-    "/media/FOUR/data/baja.txt",
+    joinpath(@__DIR__,"../data/baja.txt"),
     delim=" ",
     ignorerepeated=true,
     )
@@ -141,7 +141,7 @@ bajaEQ = bajaEQ[bajaEQ[:,:MAG] .> 3.0,:]
 # load Hector Mine Earthquake locations 
 hecEQ = DataFrame(
     CSV.File(
-    "/media/FOUR/data/hectormine.txt",
+    joinpath(@__DIR__,"../data/hectormine.txt"),
     delim=" ",
     ignorerepeated=true,
     )
@@ -151,7 +151,7 @@ hecEQ = hecEQ[hecEQ[:,:MAG] .> 3.0, :]
 # load Ridgecrest Earthquake locations 
 rcEQ = DataFrame(
     CSV.File(
-    "/media/FOUR/data/ridgecrest.txt",
+    joinpath(@__DIR__,"../data/ridgecrest.txt"),
     delim=" ",
     ignorerepeated=true,
     )
@@ -210,15 +210,15 @@ GMT.basemap!(
     length="100k", units=true, offset=1.0),
 )
 GMT.psxy!(
-    "/media/FOUR/data/CFM/obj/traces/gmt/Baja_traces.lonLat",
+    joinpath(@__DIR__,"../data/CFM/obj/traces/gmt/Baja_traces.lonLat"),
     pen=1,
 )
 GMT.psxy!(
-    "/media/FOUR/data/CFM/obj/traces/gmt/HectorMine_traces.lonLat",
+    joinpath(@__DIR__,"../data/CFM/obj/traces/gmt/HectorMine_traces.lonLat"),
     pen=1,
 )
 GMT.psxy!(
-    "/media/FOUR/data/CFM/obj/traces/gmt/Ridgecrest_traces.lonLat",
+    joinpath(@__DIR__,"../data/CFM/obj/traces/gmt/Ridgecrest_traces.lonLat"),
     pen=1,
 )
 GMT.scatter!(
@@ -275,18 +275,18 @@ GMT.psmeca!(
         fill=:red, 
         show=true,
         fmt=:png,
-        savefig="/media/FOUR/data/FINAL-FIGURES/EQ-map.png",
+        savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/EQ-map.png"),
 )
 
 ##### plot dv/v and GPS ####
 # load dv/v 
-WES = Arrow.Table("/media/FOUR/data/FIT-DVV-SSE/90-DAY/CI.WES.arrow") |> DataFrame
-HEC = Arrow.Table("/media/FOUR/data/FIT-DVV-SSE/90-DAY/CI.HEC.arrow") |> DataFrame
-JRC2 = Arrow.Table("/media/FOUR/data/FIT-DVV-SSE/90-DAY/CI.JRC2.arrow") |> DataFrame
+WES = Arrow.Table(joinpath(@__DIR__,"../data/FIT-DVV-SSE/90-DAY/CI.WES.arrow")) |> DataFrame
+HEC = Arrow.Table(joinpath(@__DIR__,"../data/FIT-DVV-SSE/90-DAY/CI.HEC.arrow")) |> DataFrame
+JRC2 = Arrow.Table(joinpath(@__DIR__,"../data/FIT-DVV-SSE/90-DAY/CI.JRC2.arrow")) |> DataFrame
 
 # load GPS data 
 BEPK = CSV.File(
-    "/media/FOUR/data/WNAMdetrend/bepkFilterDetrend.neu", 
+    joinpath(@__DIR__,"../data/WNAMdetrend/bepkFilterDetrend.neu"), 
     comment="#",
     header=[
         "DATE",
@@ -307,7 +307,7 @@ BEPK = CSV.File(
 ) |> DataFrame
 BEPK[!,:DATE] = Date.(BEPK[!,:YEAR]) .+ Day.(BEPK[!,:DAY] .- 1)
 LDSW = CSV.File(
-    "/media/FOUR/data/WNAMdetrend/ldswFilterDetrend.neu", 
+    joinpath(@__DIR__,"../data/WNAMdetrend/ldswFilterDetrend.neu"), 
     comment="#",
     header=[
         "DATE",
@@ -328,7 +328,7 @@ LDSW = CSV.File(
 ) |> DataFrame
 LDSW[!,:DATE] = Date.(LDSW[!,:YEAR]) .+ Day.(LDSW[!,:DAY] .- 1)
 P494 = CSV.File(
-    "/media/FOUR/data/WNAMdetrend/p494FilterDetrend.neu", 
+    joinpath(@__DIR__,"../data/WNAMdetrend/p494FilterDetrend.neu"), 
     comment="#",
     header=[
         "DATE",
@@ -1002,9 +1002,9 @@ plot!(
 )
 
 # plot final figure with map 
-img = load("/media/FOUR/data/FINAL-FIGURES/EQ-map.png")
+img = load(joinpath(@__DIR__,"../data/FINAL-FIGURES/EQ-map.png"))
 p4 = plot(img,border=:none,dpi=250,size=(400,600))
 annotate!((-100,100,text("A",20)))
 l = Plots.@layout [a{0.5w} [b; c; d;]]
 Plots.plot(p4,p1,p2,p3,layout=l,size=(1200,700))
-Plots.savefig("/media/FOUR/data/FINAL-FIGURES/relaxation-map.png")
+Plots.savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/relaxation-map.png"))

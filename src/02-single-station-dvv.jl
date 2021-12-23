@@ -186,7 +186,7 @@ addprocs()
     interval = Day(dvvdays)
 
     # directories 
-    ROOTDIR = "/media/FOUR/data/"
+    ROOTDIR = joinpath(@__DIR__,"../data/")
     SCDIR = joinpath(ROOTDIR,"CORR")
     NCDIR = joinpath(ROOTDIR,"NCCORR")
     DVVDIR = joinpath(ROOTDIR,"DVV-$dvvdays-DAY")

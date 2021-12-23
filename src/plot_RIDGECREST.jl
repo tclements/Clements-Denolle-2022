@@ -5,11 +5,11 @@ using Dates
 using Plots 
 
 # read dv/v for relevant stations
-CLC = Arrow.Table("/media/FOUR/data/DVV-10-DAY-COMP/2.0-4.0/CI.CLC.arrow") |> DataFrame
-JRC2 = Arrow.Table("/media/FOUR/data/DVV-10-DAY-COMP/2.0-4.0/CI.JRC2.arrow") |> DataFrame
-LRL = Arrow.Table("/media/FOUR/data/DVV-10-DAY-COMP/2.0-4.0/CI.LRL.arrow") |> DataFrame
-WCS2 = Arrow.Table("/media/FOUR/data/DVV-10-DAY-COMP/2.0-4.0/CI.WCS2.arrow") |> DataFrame
-WRC2 = Arrow.Table("/media/FOUR/data/DVV-10-DAY-COMP/2.0-4.0/CI.WRC2.arrow") |> DataFrame
+CLC = Arrow.Table(joinpath(@__DIR__,"../data/DVV-10-DAY-COMP/2.0-4.0/CI.CLC.arrow")) |> DataFrame
+JRC2 = Arrow.Table(joinpath(@__DIR__,"../data/DVV-10-DAY-COMP/2.0-4.0/CI.JRC2.arrow")) |> DataFrame
+LRL = Arrow.Table(joinpath(@__DIR__,"../data/DVV-10-DAY-COMP/2.0-4.0/CI.LRL.arrow")) |> DataFrame
+WCS2 = Arrow.Table(joinpath(@__DIR__,"../data/DVV-10-DAY-COMP/2.0-4.0/CI.WCS2.arrow")) |> DataFrame
+WRC2 = Arrow.Table(joinpath(@__DIR__,"../data/DVV-10-DAY-COMP/2.0-4.0/CI.WRC2.arrow")) |> DataFrame
 mindate = Date(2017,1,1)
 maxdate = Date(2021,2,18)
 cmap = cgrad(:inferno, (0,1),rev=true)
@@ -86,10 +86,4 @@ plot(
     sharex=true,
     dpi=500,
 )
-savefig("/media/FOUR/data/FINAL-FIGURES/RIDGECREST-DVV.svg")
-savefig("/media/FOUR/data/FINAL-FIGURES/RIDGECREST-DVV.png")
-# to-do 
-# 1 move legends 
-# 2 sharex 
-# 3 add line at earthquake 
-# 4 show decorrelation better 
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/RIDGECREST-DVV.png"))

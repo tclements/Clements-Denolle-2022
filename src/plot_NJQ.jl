@@ -20,16 +20,16 @@ function rolling_mean(A::AbstractArray,k::Int)
 end
 
 # read data from CI.NJQ 
-NJQ = Arrow.Table("/media/FOUR/data/FIT-DVV-SSE/90-DAY/CI.NJQ.arrow") |> DataFrame
+NJQ = Arrow.Table(joinpath(@__DIR__,"../data/FIT-DVV-SSE/90-DAY/CI.NJQ.arrow")) |> DataFrame
 
 # Alisal reservoir elevation 
-ALI = CSV.File("/media/FOUR/data/alisalreservoir.tsv",comment="#",skipto=3) |> DataFrame
+ALI = CSV.File(joinpath(@__DIR__,"../data/alisalreservoir.tsv"),comment="#",skipto=3) |> DataFrame
 ALI[!,:WSE] ./= 3.28 # convert water surface elevation to m 
 dropmissing!(ALI,:WSE)
 ALI[:,:WSE] .-= mean(ALI[:,:WSE])
 
 # daily discharge in nearby river
-SYD = CSV.File("/media/FOUR/data/santaynezdischarge.tsv",comment="#",skipto=3) |> DataFrame
+SYD = CSV.File(joinpath(@__DIR__,"../data/santaynezdischarge.tsv"),comment="#",skipto=3) |> DataFrame
 dropmissing!(SYD,:DISCHARGE) # DISCHARGE is in ft^3 / s (every 15 minute)
 SYD[!,:DISCHARGE] ./= 35.314 # convert to meters^3 / s
 SYD[!,:DISCHARGE] .*= 900 # convert m^3 / s to m^3
@@ -55,13 +55,13 @@ tdis = tdis[tind]
 cumdischarge = cumdischarge[tind]
 
 # get NJQ lat, lon from CI station locations 
-cistations = DataFrame(CSV.File("/home/timclements/CALI/CIstations.csv"))
+cistations = DataFrame(CSV.File(joinpath(@__DIR__,"../data/CIstations.csv")))
 NJQind = findfirst(cistations[!,:Station] .== "NJQ")
 NJQlat = cistations[NJQind,:Latitude]
 NJQlon = cistations[NJQind,:Longitude]
 
 # load precip data
-filename = "/media/FOUR/data/ppt.nc"
+filename = joinpath(@__DIR__,"../data/ppt.nc")
 lon = ncread(filename,"lon")
 lat = ncread(filename,"lat")
 lonind = argmin(abs.(lon .- NJQlon))
@@ -183,8 +183,7 @@ plot!(
     xlims=(NJQ[1,:DATE],NJQ[end,:DATE]),
     ylims=(0.,1.5)
 )
-savefig("/media/FOUR/data/FINAL-FIGURES/CINJQ-DVV-PRECIP.svg")
-savefig("/media/FOUR/data/FINAL-FIGURES/CINJQ-DVV-PRECIP.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CINJQ-DVV-PRECIP.png"))
 
 # plot dv/v vs precip and water level 
 scatter(
@@ -246,8 +245,7 @@ plot!(
     xlims=(NJQ[1,:DATE],NJQ[end,:DATE]),
     ylims=(100.,3e8)
 )
-savefig("/media/FOUR/data/FINAL-FIGURES/CINJQ-DVV-STREAMFLOW.svg")
-savefig("/media/FOUR/data/FINAL-FIGURES/CINJQ-DVV-STREAMFLOW.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CINJQ-DVV-STREAMFLOW.png"))
 
 # plot dv/v vs CDM
 scatter(
@@ -309,8 +307,7 @@ plot!(
     xlims=(NJQ[1,:DATE],NJQ[end,:DATE]),
     ylims=(0.,1.5)
 )
-savefig("/media/FOUR/data/FINAL-FIGURES/CINJQ-DVV-CDM.svg")
-savefig("/media/FOUR/data/FINAL-FIGURES/CINJQ-DVV-CDM.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CINJQ-DVV-CDM.png"))
 
 # plot dv/v vs Baseflow model 
 scatter(
@@ -380,5 +377,4 @@ plot!(
     xlims=(NJQ[1,:DATE],NJQ[end,:DATE]),
     ylims=(0.,1.5)
 )
-savefig("/media/FOUR/data/FINAL-FIGURES/CINJQ-DVV-SSW.svg")
-savefig("/media/FOUR/data/FINAL-FIGURES/CINJQ-DVV-SSW.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CINJQ-DVV-SSW.png"))

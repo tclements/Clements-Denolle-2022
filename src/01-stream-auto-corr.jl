@@ -123,7 +123,7 @@ end
 
 # get station list 
 aws = AWSConfig(region="us-west-2")
-stations = s3_get(aws,"bh-auto-corr","stations")
+stations = s3_get(aws,upload_bucket,"stations")
 stations = String(stations)
 stations = split(stations,"\n")
 for ii = 1:length(stations)

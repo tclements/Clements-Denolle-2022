@@ -4,12 +4,12 @@ using Glob
 using Plots 
 
 # read Vp / Vs / Rho data 
-df = DataFrame(CSV.File("/media/FOUR/data/DISPERSION/disp",delim=' ',ignorerepeated=true,select=[3,7,8,9], header=0))
+df = DataFrame(CSV.File(joinpath(@__DIR__,"../data/DISPERSION/disp"),delim=' ',ignorerepeated=true,select=[3,7,8,9], header=0))
 model = df[:,[:Column3, :Column7, :Column8, :Column9]] ./ 1000 
 rename!(model,["DEPTH","VP", "VS", "RHO"])
 
 # read elastic rayleigh wave data 
-kernels = glob("elastic*","/media/FOUR/data/DISPERSION/")
+kernels = glob("elastic*",joinpath(@__DIR__,"../data/DISPERSION/"))
 N = length(kernels)
 
 # plot Vp Vs depth 
@@ -76,5 +76,4 @@ for ii in N:-1:1
 end
 l = @layout [a b]
 plot(p1,p2,layout=l,dpi=500)
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-DISPERSION.svg")
-savefig("/media/FOUR/data/FINAL-FIGURES/CILJR-DISPERSION.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CILJR-DISPERSION.png"))

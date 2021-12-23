@@ -10,8 +10,8 @@ catch
 end
 using GMT 
 
-NCdf = DataFrame(CSV.File("/home/timclements/CALI/NCstations.csv"))
-SCdf = DataFrame(CSV.File("/home/timclements/CALI/CIstations.csv"))
+NCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/NCstations.csv")))
+SCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/CIstations.csv")))
 CAdf = vcat(NCdf, SCdf)
 CAdf[:,:NETSTA] = CAdf[:,:Network] .* "." .* CAdf[:,:Station]
 CAdf = CAdf[findall(in(["RXH","SAL"]),CAdf[:,:Station]),:]
@@ -95,25 +95,25 @@ scatter!(
     markersize=[5.0,5.0],
     show=true,
     fmt=:png,
-    savefig="/media/FOUR/data/FINAL-FIGURES/SALTON-map.png",
+    savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/SALTON-map.png"),
 )
 
 
 # plot salton mapind
-img1 = load("/media/FOUR/data/FINAL-FIGURES/SALTON-map.png")
+img1 = load(joinpath(@__DIR__,"../data/FINAL-FIGURES/SALTON-map.png"))
 p1 = plot(img1,border=:none)
 annotate!((-160,100,text("A",20)))
 
 # plot dv/v at salton city 
-img2 = load("/media/FOUR/data/FINAL-FIGURES/CISAL-DVV-EQ.png")
+img2 = load(joinpath(@__DIR__,"../data/FINAL-FIGURES/CISAL-DVV-EQ.png"))
 p2 = plot(img2,border=:none)
 annotate!((157,100,text("B",20)))
 
 # plot dv/v at CI.RXH 
-img3 = load("/media/FOUR/data/FINAL-FIGURES/CIRXH-DVV.png")
+img3 = load(joinpath(@__DIR__,"../data/FINAL-FIGURES/CIRXH-DVV.png"))
 p3 = plot(img3,border=:none)
 annotate!((-100,100,text("C",20)))
 # l1 = @layout  [a [b{0.95w,0.5h}; c{0.9w, 0.5h}]]
 l1 = @layout  [a{0.36h}; b{0.34h}; c{0.3h}]
 plot(p1,p2,p3,layout=l1,size=(1600,1600),dpi=250)
-savefig("/media/FOUR/data/FINAL-FIGURES/SALTON-SAL-RXH.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/SALTON-SAL-RXH.png"))

@@ -8,7 +8,7 @@ using Dates
 using Glob 
 using Statistics 
 
-ROOTDIR = "/media/FOUR/data/"
+ROOTDIR = joinpath(@__DIR__,"../data/")
 DVVDIR = joinpath(ROOTDIR,"DVV-90-DAY")
 COMPDVV = joinpath(ROOTDIR,"DVV-90-DAY-COMP")
 if !isdir(COMPDVV)

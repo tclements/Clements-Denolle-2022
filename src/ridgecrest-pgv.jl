@@ -33,7 +33,7 @@ function fftderivative(S::SeisData)
 end
 
 # read Ridgecrest data 
-S = read_data("mseed","/media/FOUR/data/38457511.ms")
+S = read_data("mseed",joinpath(@__DIR__,"../data/38457511.ms"))
 
 # move channel names into dataframe
 nslc = string.(hcat(split.(S.name,".")...))
@@ -64,7 +64,7 @@ SHH = S[findall(in(df.NAME),S.name)]
 
 # get stationXML for non CI network stations 
 # directory for instrument response 
-XMLDIR = "/media/FOUR/data/XML/"
+XMLDIR = joinpath(@__DIR__,"../data/XML/")
 XMLfiles = glob("*",XMLDIR)
 
 for ii in 1:size(df,1)
@@ -195,7 +195,7 @@ end
 
 # add VS30 values to PGV 
 # load VS30 data from USGS https://earthquake.usgs.gov/data/vs30/
-ds = ArchGDAL.readraster("/media/FOUR/data/VS30/global_vs30.tif")
+ds = ArchGDAL.readraster(joinpath(@__DIR__,"../data/VS30/global_vs30.tif"))
 geotransform = ArchGDAL.getgeotransform(ds)
 vs30lon = range(geotransform[1],step=geotransform[2],length=ds.size[1])
 vs30lat = range(geotransform[4],step=geotransform[6],length=ds.size[2])
@@ -223,4 +223,4 @@ PGV[:,:VS30] = VS30
 PGV[:,:STRAIN] = PGV[:,:PGV] ./ PGV[:,:VS30]
 
 # write to disk in arrow format 
-Arrow.write("/media/FOUR/data/ridgecrest-PGV.arrow",PGV)
+Arrow.write(joinpath(@__DIR__,"../data/ridgecrest-PGV.arrow",PGV))

@@ -18,19 +18,19 @@ function smooth_withfiltfilt(A::AbstractArray; window_len::Int=11, window::Symbo
 end
 
 # read data from CI.RXH 
-RXH = Arrow.Table("/media/FOUR/data/COMP-ONE-DVV/1.0-2.0/CI.RXH.arrow") |> DataFrame
-EN = Arrow.Table("/media/FOUR/data/ONE-DVV/1.0-2.0/CI.RXH..BHE.CI.RXH..BHN.arrow") |> DataFrame
-EZ = Arrow.Table("/media/FOUR/data/ONE-DVV/1.0-2.0/CI.RXH..BHE.CI.RXH..BHZ.arrow") |> DataFrame
-NZ = Arrow.Table("/media/FOUR/data/ONE-DVV/1.0-2.0/CI.RXH..BHN.CI.RXH..BHZ.arrow") |> DataFrame
+RXH = Arrow.Table(joinpath(@__DIR__,"../data/COMP-ONE-DVV/1.0-2.0/CI.RXH.arrow")) |> DataFrame
+EN = Arrow.Table(joinpath(@__DIR__,"../data/ONE-DVV/1.0-2.0/CI.RXH..BHE.CI.RXH..BHN.arrow")) |> DataFrame
+EZ = Arrow.Table(joinpath(@__DIR__,"../data/ONE-DVV/1.0-2.0/CI.RXH..BHE.CI.RXH..BHZ.arrow")) |> DataFrame
+NZ = Arrow.Table(joinpath(@__DIR__,"../data/ONE-DVV/1.0-2.0/CI.RXH..BHN.CI.RXH..BHZ.arrow")) |> DataFrame
 
 # get RXH lat, lon from CI station locations 
-cistations = DataFrame(CSV.File("/home/timclements/CALI/CIstations.csv"))
+cistations = DataFrame(CSV.File(joinpath(@__DIR__,"../data/CIstations.csv")))
 RXHind = findfirst(cistations[!,:Station] .== "RXH")
 RXHlat = cistations[RXHind,:Latitude]
 RXHlon = cistations[RXHind,:Longitude]
 
 # find groundwater wells nearby 
-LAKE = CSV.File("/media/FOUR/data/saltonelevation.tsv",comment="#",skipto=3) |> DataFrame
+LAKE = CSV.File(joinpath(@__DIR__,"../data/saltonelevation.tsv"),comment="#",skipto=3) |> DataFrame
 dropmissing!(LAKE,:WSE) # lev_va is ft below surface
 LAKE[!,:WSE] ./= 3.28 # convert to meters 
 LAKE[:,:WSE] .-= mean(LAKE[:,:WSE])
@@ -133,8 +133,7 @@ scatter!(
 )
 l = Plots.@layout [a; b]
 plot(p1,p2,layout=l)
-savefig("/media/FOUR/data/FINAL-FIGURES/CIRXH-DVV.svg")
-savefig("/media/FOUR/data/FINAL-FIGURES/CIRXH-DVV.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CIRXH-DVV.png"))
 
 # plot groundwater level 
 RXHylims = (-1.0,1.25)
@@ -177,6 +176,5 @@ plot!(
 )
 l = Plots.@layout [a; b]
 plot(p1,p2,layout=l)
-savefig("/media/FOUR/data/FINAL-FIGURES/SALTON-ELEV.svg")
-savefig("/media/FOUR/data/FINAL-FIGURES/SALTON-ELEV.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/SALTON-ELEV.png"))
 

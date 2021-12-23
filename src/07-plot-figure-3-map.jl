@@ -8,7 +8,7 @@ using Statistics
 using GMT
 
 # get CIstation location 
-cistations = DataFrame(CSV.File("/home/timclements/CALI/CIstations.csv"))
+cistations = DataFrame(CSV.File(joinpath(@__DIR__,"../data/CIstations.csv")))
 LJRind = findfirst(cistations[!,:Station] .== "LJR")
 LJRlat = cistations[LJRind,:Latitude]
 LJRlon = cistations[LJRind,:Longitude]
@@ -22,7 +22,7 @@ GWLlon = [-118.866718, -118.8161, -118.820786, -118.8624]
 GWLlat = [34.824446, 34.850942, 34.848739, 34.83199] 
 
 # get precip location 
-filename = "/media/FOUR/data/ppt.nc"
+filename = joinpath(@__DIR__,"../data/ppt.nc")
 pptlon = ncread(filename,"lon")
 pptlat = ncread(filename,"lat")
 pptlonind = argmin(abs.(pptlon .- LJRlon))
@@ -39,7 +39,7 @@ pptrect = [pptlonminus pptlatminus;
 
 # load GRACE data 
 # from http://www2.csr.utexas.edu/grace/RL06_mascons.html
-filename = "/media/FOUR/data/CSR_GRACE_GRACE-FO_RL06_Mascons_all-corrections_v02.nc"
+filename = joinpath(@__DIR__,"../data/CSR_GRACE_GRACE-FO_RL06_Mascons_all-corrections_v02.nc")
 GRACElon = ncread(filename,"lon")
 GRACElat = ncread(filename,"lat")
 GRACElon[GRACElon .> 180] .-= 360
@@ -56,7 +56,7 @@ GRACErect = [GRACElonminus GRACElatminus;
         GRACElonminus GRACElatminus]
 
 # get location of I5 
-table = Shapefile.Table("/media/FOUR/data/interstate/intrstat.shp")
+table = Shapefile.Table(joinpath(@__DIR__,"../data/interstate/intrstat.shp"))
 I5 = Shapefile.shapes(table)[findall(table.ROUTE_NUM .== "I5")[1]]
 I5lon = [point.x for point in I5.points]
 I5lat = [point.y for point in I5.points]
@@ -69,7 +69,7 @@ I5lat = I5lat[I5ind]
 # GPS station location 
 WNAMloc = DataFrame(
     CSV.File(
-        "/media/FOUR/data/WNAM-LOC.tsv",
+        joinpath(@__DIR__,"../data/WNAM-LOC.tsv"),
         delim=' ',
         ignorerepeated=true,
     )
@@ -141,9 +141,6 @@ scatter!(
     markeredgecolor=:black,
     marker="t",
     markersize=0.5,
-    # show=true,
-    # fmt=:png,
-    # savefig="/media/FOUR/data/FINAL-FIGURES/CI-station-map.png",
 )
 scatter!(
     GWLlon,
@@ -152,9 +149,6 @@ scatter!(
     markeredgecolor=:black,
     marker="circle",
     markersize=0.3,
-    # show=true,
-    # fmt=:png,
-    # savefig="/media/FOUR/data/FINAL-FIGURES/CI-station-map.png",
 )
 basemap!(inset=(anchor=:BL, width=0.1, offset=(0.5, 0.5), save="xx000"))
 t = readdlm("xx000")
@@ -175,5 +169,5 @@ scatter!(
      markersize=0.5,
      show=true,
      fmt=:png,
-     savefig=expanduser("/media/FOUR/data/FINAL-FIGURES/LJR-map.png"),
+     savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/LJR-map.png"),
 )

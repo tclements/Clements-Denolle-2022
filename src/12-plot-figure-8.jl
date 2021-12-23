@@ -12,12 +12,12 @@ using Statistics
 const AG = ArchGDAL
 
 #load station locations 
-NCdf = DataFrame(CSV.File("/home/timclements/CALI/NCstations.csv"))
-SCdf = DataFrame(CSV.File("/home/timclements/CALI/CIstations.csv"))
+NCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/NCstations.csv")))
+SCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/CIstations.csv")))
 CAdf = vcat(NCdf, SCdf)
 
 # load PGV values 
-PGV = Arrow.Table("/media/FOUR/data/ridgecrest-PGV.arrow") |> Arrow.columntable |> DataFrame 
+PGV = Arrow.Table(joinpath(@__DIR__,"../data/ridgecrest-PGV.arrow")) |> Arrow.columntable |> DataFrame 
 
 # plot maps for 3 frequency octaves 
 freqmin = 2.0 .^ (0:2)
@@ -120,7 +120,7 @@ for ii in 1:length(freqmin)
         fill=:red, 
         show=true,
         fmt=:png,
-        savefig="/media/FOUR/data/FINAL-FIGURES/PGV-Ridgecrest-$fmin-$fmax.png",
+        savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/PGV-Ridgecrest-$fmin-$fmax.png"),
     )
 end
 
@@ -221,6 +221,6 @@ for ii in 1:length(freqmin)
         fill=:red, 
         show=true,
         fmt=:png,
-        savefig="/media/FOUR/data/FINAL-FIGURES/PGA-Ridgecrest-$fmin-$fmax.png",
+        savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/PGA-Ridgecrest-$fmin-$fmax.png"),
     )
 end

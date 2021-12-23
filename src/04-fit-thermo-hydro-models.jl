@@ -69,9 +69,9 @@ end
 days = 90 
 
 # load dv/v data 
-files = glob("*","/media/FOUR/data/DVV-$days-DAY-COMP/2.0-4.0")
-FITDIR = "/media/FOUR/data/FIT-DVV-SSE/$days-DAY"
-FIGDIR = "/media/FOUR/data/FIGURES-DVV-SSE/$days-DAY"
+files = glob("*",joinpath(@__DIR__,"../data/DVV-$days-DAY-COMP/2.0-4.0"))
+FITDIR = joinpath(@__DIR__,"../data/FIT-DVV-SSE/$days-DAY")
+FIGDIR = joinpath(@__DIR__,"../data/FIGURES-DVV-SSE/$days-DAY")
 if !isdir(FITDIR)
     mkpath(FITDIR)
 end
@@ -80,7 +80,7 @@ if !isdir(FIGDIR)
 end
 
 # load precip data 
-filename = "/media/FOUR/data/ppt.nc"
+filename = joinpath(@__DIR__,"../data/ppt.nc")
 lon = ncread(filename,"lon")
 lat = ncread(filename,"lat")
 tppt = ncread(filename,"t")
@@ -89,15 +89,15 @@ ppt = ncread(filename,"ppt")
 tpptday = (tppt .- tppt[1]) ./ Day(1)
 
 # load tmean data 
-filename = "/media/FOUR/data/tmean.nc"
+filename = joinpath(@__DIR__,"../data/tmean.nc")
 tmean = ncread(filename,"tmean")
 ttmean = ncread(filename,"t")
 ttmean = Date.(Dates.unix2datetime.(ttmean))
 ttmeanday = (ttmean .- ttmean[1]) ./ Day(1)
 
 # get CI station locations 
-SCdf = DataFrame(CSV.File("/home/timclements/CALI/CIstations.csv"))
-NCdf = DataFrame(CSV.File("/home/timclements/CALI/NCstations.csv"))
+SCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/CIstations.csv")))
+NCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/NCstations.csv")))
 CAdf = vcat(NCdf, SCdf)
 
 # df to hold parameters 
@@ -367,4 +367,4 @@ for kk in 1:length(files)
 
 end
 # write to arrow 
-Arrow.write("/media/FOUR/data/hydro-model-$days-day.arrow",fitdf)
+Arrow.write(joinpath(@__DIR__,"../data/hydro-model-$days-day.arrow"),fitdf)

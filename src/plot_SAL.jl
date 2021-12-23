@@ -20,16 +20,16 @@ end
 rectangle(w, h, x, y) = Shape(x + [0,w,w,0], y + [0,0,h,h])
 
 # read dv/v for CI.SAL 
-SAL = Arrow.Table("/media/FOUR/data/DVV-10-DAY-COMP/2.0-4.0/CI.SAL.arrow") |> DataFrame
+SAL = Arrow.Table(joinpath(@__DIR__,"../data/DVV-10-DAY-COMP/2.0-4.0/CI.SAL.arrow")) |> DataFrame
 
 # get SAL lat, lon from CI station locations 
-SCdf = DataFrame(CSV.File("/home/timclements/CALI/CIstations.csv"))
+SCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/CIstations.csv")))
 SALind = findfirst(SCdf[!,:Station] .== "SAL")
 SALlat = SCdf[SALind,:Latitude]
 SALlon = SCdf[SALind,:Longitude]
 
 # read temperature
-filename = "/media/FOUR/data/tmean.nc"
+filename = joinpath(@__DIR__,"../data/tmean.nc")
 ttmean = ncread(filename,"t")
 lon = ncread(filename,"lon")
 lat = ncread(filename,"lat")
@@ -41,7 +41,7 @@ temp .-= mean(temp)
 smoothtemp = smooth_withfiltfilt(temp,window_len=45)
 
 # load precip data
-filename = "/media/FOUR/data/ppt.nc"
+filename = joinpath(@__DIR__,"../data/ppt.nc")
 lon = ncread(filename,"lon")
 lat = ncread(filename,"lat")
 t = ncread(filename,"t")
@@ -129,9 +129,7 @@ plot!(
     yforeground_color_axis=:red,
     colorbar=false,
 )
-
-savefig("/media/FOUR/data/FINAL-FIGURES/CISAL-DVV.svg")
-savefig("/media/FOUR/data/FINAL-FIGURES/CISAL-DVV.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CISAL-DVV.png"))
 
 SALylims = (-1.0,1.5)
 scatter(
@@ -213,6 +211,4 @@ scatter!(
     # yforeground_color_axis=:dodgerblue,
     xtick=:off,
 )
-
-savefig("/media/FOUR/data/FINAL-FIGURES/CISAL-DVV-EQ.svg")
-savefig("/media/FOUR/data/FINAL-FIGURES/CISAL-DVV-EQ.png")
+savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CISAL-DVV-EQ.png"))
