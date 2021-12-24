@@ -9,10 +9,10 @@ import GMT
 import Plots 
 
 # lat/lon for LA map 
-LAminlon = -118.75 
-LAmaxlon = -117.5 
-LAminlat = 33.6 
-LAmaxlat = 34.52 
+LAminlon = -119.0
+LAmaxlon = -115.5 
+LAminlat = 32.75 
+LAmaxlat = 34.75 
 
 # load dv/v 
 fitdf = Arrow.Table(joinpath(@__DIR__,"../data/hydro-model-90-day.arrow")) |> Arrow.columntable |> DataFrame
@@ -217,7 +217,7 @@ GMT.scatter!(
     zcolor=(tempcomp[Eind] .- 0.5) .* 200,
     colormap=C,
     alpha=5,
-    markersize="7p",
+    markersize="6p",
 )
 rect = [LAminlon LAminlat; LAminlon LAmaxlat; LAmaxlon LAmaxlat; LAmaxlon LAminlat; LAminlon LAminlat];
 GMT.plot!(
@@ -232,21 +232,21 @@ GMT.colorbar!(
     pos=(anchor=:BL,horizontal=true,offset=(-9,-2),length=8),
 )
 GMT.plot!(
-    [LAminlon LAmaxlat; -119.05 39.0],
+    [LAminlon LAmaxlat; -119.75 38.9],
     region=(minlon,maxlon,minlat,maxlat), 
     lw=1,
     ls=:dashed,
     alpha=15,
 )
 GMT.plot!(
-    [LAmaxlon LAmaxlat; -114.75 39.0],
+    [LAmaxlon LAmaxlat; -114.57 38.88],
     region=(minlon,maxlon,minlat,maxlat), 
     lw=1,
     ls=:dashed, 
     alpha=15,
 )
 # inset map 
-GMT.basemap!(inset=(anchor=:TR, width=2, offset=(4.5, 3), save="xx000"))
+GMT.basemap!(inset=(anchor=:TR, width=2, offset=(5.33, 3.1), save="xx000"))
 t = readdlm("xx000")
 # GMT.coast!(region=[LAminlon LAmaxlon LAminlat LAmaxlat], proj=:merc,
 #            land=:lightgray, area=5000, shore=:faint, ocean=:dodgerblue,
@@ -257,7 +257,7 @@ t = readdlm("xx000")
 # )
 GMT.grdimage!(
     "@srtm_relief_03s",
-    cmap=:terra, 
+    cmap=:elevation, 
     J=:merc,
     shade=true,
     region=(LAminlon,LAmaxlon,LAminlat,LAmaxlat),
@@ -278,6 +278,6 @@ GMT.scatter!(
     colormap=C,
     alpha=0,
     show=true,
-    markersize="7p",
+    markersize="4p",
     savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/Hydro-Thermal-Mixing-map.png"),
 )

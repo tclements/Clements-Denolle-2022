@@ -2,6 +2,7 @@ using Arrow
 using CSV
 using Dates
 using DataFrames 
+using DelimitedFiles
 using DSP 
 using Glob 
 using GLM 
@@ -43,6 +44,12 @@ end
 NCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/NCstations.csv")))
 SCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/CIstations.csv")))
 CAdf = vcat(NCdf, SCdf)
+
+# lat/lon for LA map 
+LAminlon = -119.5
+LAmaxlon = -116.5 
+LAminlat = 32.75 
+LAmaxlat = 34.75 
 
 # load GRACE data 
 # from http://www2.csr.utexas.edu/grace/RL06_mascons.html
@@ -203,7 +210,7 @@ GMT.scatter!(
     transparency= 15,
     # colorbar=true,
     cmap=CDVV,
-    markersize="7p",
+    markersize="6p",
 )
 GMT.colorbar!(
     C=CDVV,
@@ -215,6 +222,58 @@ GMT.colorbar!(
     frame=(annot=:auto, ticks=:auto, xlabel="LWE [cm]"), 
     pos=(anchor=:BL, horizontal=true,offset=(-5.5,-2),move_annot=true,length=5), 
     W=-1,
+)
+rect = [LAminlon LAminlat; LAminlon LAmaxlat; LAmaxlon LAmaxlat; LAmaxlon LAminlat; LAminlon LAminlat];
+GMT.plot!(
+    rect, 
+    region=(minlon,maxlon,minlat,maxlat), 
+    lw=1,
+    ls=:dashed
+)
+GMT.plot!(
+    [LAminlon LAmaxlat; -119.65 38.9],
+    region=(minlon,maxlon,minlat,maxlat), 
+    lw=1,
+    ls=:dashed,
+    alpha=15,
+)
+GMT.plot!(
+    [LAmaxlon LAmaxlat; -114.55 38.9],
+    region=(minlon,maxlon,minlat,maxlat), 
+    lw=1,
+    ls=:dashed, 
+    alpha=15,
+)
+# inset map 
+tt = mapproject(region=(LAminlon,LAmaxlon,LAminlat,LAmaxlat), proj=:merc, figsize=6, map_size=true);
+mapW = tt[1].data[1];   mapH = tt[1].data[2]
+GMT.basemap!(inset=(size=(mapW, mapH), anchor=:TR, width=1, offset=(-6.75, -10.25), save="xx000"))
+t = readdlm("xx000")
+GMT.grdimage!(
+    "@srtm_relief_03s",
+    cmap=gray, 
+    J=:merc,
+    shade=true,
+    region=(LAminlon,LAmaxlon,LAminlat,LAmaxlat),
+    coast=false,
+    colorbar=false,
+    xshift=t[1], yshift=t[2],
+)
+GMT.coast!(
+    shore=true, 
+    ocean=:white,
+    N="a",
+)
+GMT.scatter!(
+    ΔDVVdf[:,:LON],
+    ΔDVVdf[:,:LAT],
+    zcolor=-ΔDVVdf[:,:SLOPE],
+    markeredgecolor=:black,
+    marker=:c,
+    transparency= 15,
+    # colorbar=true,
+    cmap=CDVV,
+    markersize="4p",
     show=1,
     savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/DVV-2004-2005-$freqmin-$freqmax.png"),
 )
@@ -323,7 +382,7 @@ GMT.grdimage(
     region=(minlon,maxlon,minlat,maxlat),
     coast=true,
     colorbar=false,
-)
+    )
 GMT.coast!(
     N="a",
     ocean=:white,
@@ -341,9 +400,9 @@ GMT.scatter!(
     markeredgecolor=:black,
     marker=:c,
     transparency= 15,
-    colorbar=false,
+    # colorbar=true,
     cmap=CDVV,
-    markersize="7p",
+    markersize="6p",
 )
 GMT.colorbar!(
     C=CDVV,
@@ -355,9 +414,62 @@ GMT.colorbar!(
     frame=(annot=:auto, ticks=:auto, xlabel="LWE [cm]"), 
     pos=(anchor=:BL, horizontal=true,offset=(-5.5,-2),move_annot=true,length=5), 
     W=-1,
+)
+rect = [LAminlon LAminlat; LAminlon LAmaxlat; LAmaxlon LAmaxlat; LAmaxlon LAminlat; LAminlon LAminlat];
+GMT.plot!(
+    rect, 
+    region=(minlon,maxlon,minlat,maxlat), 
+    lw=1,
+    ls=:dashed
+)
+GMT.plot!(
+    [LAminlon LAmaxlat; -119.65 38.9],
+    region=(minlon,maxlon,minlat,maxlat), 
+    lw=1,
+    ls=:dashed,
+    alpha=15,
+)
+GMT.plot!(
+    [LAmaxlon LAmaxlat; -114.55 38.9],
+    region=(minlon,maxlon,minlat,maxlat), 
+    lw=1,
+    ls=:dashed, 
+    alpha=15,
+)
+# inset map 
+tt = mapproject(region=(LAminlon,LAmaxlon,LAminlat,LAmaxlat), proj=:merc, figsize=6, map_size=true);
+mapW = tt[1].data[1];   mapH = tt[1].data[2]
+GMT.basemap!(inset=(size=(mapW, mapH), anchor=:TR, width=1, offset=(-6.75, -10.25), save="xx000"))
+t = readdlm("xx000")
+GMT.grdimage!(
+    "@srtm_relief_03s",
+    cmap=gray, 
+    J=:merc,
+    shade=true,
+    region=(LAminlon,LAmaxlon,LAminlat,LAmaxlat),
+    coast=false,
+    colorbar=false,
+    xshift=t[1], yshift=t[2],
+)
+GMT.coast!(
+    shore=true, 
+    ocean=:white,
+    N="a",
+)
+GMT.scatter!(
+    ΔDVVdf[:,:LON],
+    ΔDVVdf[:,:LAT],
+    zcolor=-ΔDVVdf[:,:SLOPE],
+    markeredgecolor=:black,
+    marker=:c,
+    transparency= 15,
+    # colorbar=true,
+    cmap=CDVV,
+    markersize="4p",
     show=1,
     savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/DVV-2011-2016-$freqmin-$freqmax.png"),
 )
+
 
 # 2005 - 2020
 maxgap = 2*365 # maximum data gap [days]
@@ -646,7 +758,7 @@ GMT.scatter!(
     transparency= 15,
     colorbar=false,
     cmap=C,
-    markersize="7p",
+    markersize="6p",
 )
 GMT.colorbar!(
     C=C,
