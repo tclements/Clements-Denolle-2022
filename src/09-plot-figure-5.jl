@@ -610,26 +610,21 @@ GMT.colorbar!(
 )
 
 # Ridgecrest 
-maxgap = 4 # maximum data gap [days]
-mindays = 6 # minimum number of days needed for analysis 
-arrowfiles = glob("*",joinpath(@__DIR__,"../data/DVV-10-DAY-COMP/$freqmin-$freqmax/"))
+maxgap = 10 # maximum data gap [days]
+mindays = 75 # minimum number of days needed for analysis 
+arrowfiles = glob("*",joinpath(@__DIR__,"../data/FIT-DVV-SSE/90-DAY/"))
 ΔDVVdf = DataFrame()
 
 for jj in 1:length(arrowfiles)
     # read dv/v for each station 
     DVV = Arrow.Table(arrowfiles[jj]) |> Arrow.columntable |> DataFrame
-    indbefore = findall(Date(2019,6,20) .< DVV[:,:DATE] .< Date(2019,7,3))
-    indafter = findall(Date(2019,7,6) .< DVV[:,:DATE] .< Date(2019,7,16))
-    # only keep stations with > 10 days of data after Ridgecrest 
-    if (length(indbefore) < mindays) | (length(indafter) < mindays)
+    dropmissing!(DVV)
+    indafter = findall(Date(2019,7,6) .<= DVV[:,:DATE] .< Date(2019,7,6) + Day(90))
+    # only keep stations with > 90 days of data after Ridgecrest 
+    if length(indafter) < mindays
         continue 
     end
 
-    # check for gaps in the data 
-    tbefore = (DVV[indbefore,:DATE] .- DVV[indbefore[1],:DATE]) ./ Day(1) .+ 1
-    if maximum(diff(tbefore)) > maxgap
-        continue 
-    end
     tafter = (DVV[indafter,:DATE] .- DVV[indafter[1],:DATE]) ./ Day(1) .+ 1
     if maximum(diff(tafter)) > maxgap
         continue 
@@ -650,17 +645,19 @@ for jj in 1:length(arrowfiles)
 
     
     # create linear model before 
-    interB, slopeB, rtwoB = DVVslope(DVV,indbefore)
+    DVV[:,:DVV] .-= DVV[:,:ELASTIC]
     interA, slopeA, rtwoA = DVVslope(DVV,indafter)
+
+    # create EQ drop 
+    DVV[:,:EQ] = DVV[:,:DVV] .- DVV[:,:ELASTIC]
+    diffdvv = DVV[indafter[end],:EQ] - DVV[indafter[1],:EQ]
 
     # create dataframe
     df = DataFrame(
-        INTERB=interB,
-        SLOPEB=slopeB,
-        R2B=rtwoB,
         INTERA=interA,
         SLOPEA=slopeA,
         R2A=rtwoA,
+        DIFFDVV=diffdvv,
         NETSTA=netsta,
         NET=net,
         STA=sta,
@@ -669,10 +666,6 @@ for jj in 1:length(arrowfiles)
     )
     append!(ΔDVVdf,df)
 end
-
-# subset good observations 
-ΔDVVdf[:,:SLOPE] = ΔDVVdf[:,:SLOPEA] .- ΔDVVdf[:,:SLOPEB]
-# ΔDVVdf = ΔDVVdf[ΔDVVdf[:,:R2A] .> 0.5,:]
 
 # plot with GMT 
 minlon = -122
@@ -694,13 +687,6 @@ GMT.grdimage(
     coast=true,
     colorbar=false,
 )
-# GMT.coast(
-#     proj=:merc,
-#     region=(minlon,maxlon,minlat,maxlat),
-#     area=5000, 
-#     shore=:faint, 
-#     ocean=:dodgerblue,
-# )
 GMT.coast!(
     N="a",
     ocean=:white,
@@ -752,7 +738,7 @@ GMT.plot!(
 GMT.scatter!(
     ΔDVVdf[:,:LON],
     ΔDVVdf[:,:LAT],
-    zcolor=ΔDVVdf[:,:SLOPE],
+    zcolor=ΔDVVdf[:,:SLOPEA],
     markeredgecolor=:black,
     marker=:c,
     transparency= 15,

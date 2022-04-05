@@ -20,8 +20,8 @@ function findmaxtheta(S::SeisData,n::Real)
     return θs,amps
 end
 
-# read Ridgecrest data 
-S = read_data("mseed",joinpath(@__DIR__,"../data/38457511.ms"))
+# read Baja data 
+S = read_data("mseed",joinpath(@__DIR__,"../data/14607652.ms"))
 
 # move channel names into dataframe
 nslc = string.(hcat(split.(S.name,".")...))
@@ -172,8 +172,8 @@ for ii in 1:length(freqmin)
             STA=sta,
             LON=SV.loc[1].lon,
             LAT=SV.loc[1].lat,
-            PGV=PGVs[indV] * 100, # convert to cm/s 
-            PGA=PGAs[indA] * 100, # convert to cm/s^2
+            PGV=PGVs[indV] .* 100, # convert to cm/s 
+            PGA=PGAs[indA] .* 100, # convert to cm/s^2
             FREQMIN=freqmin[ii],
             FREQMAX=freqmax[ii],
             ),
@@ -211,4 +211,4 @@ PGA[:,:VS30] = VS30
 PGA[:,:STRAIN] = PGA[:,:PGV] ./ PGA[:,:VS30]
 
 # write to disk in arrow format 
-Arrow.write(joinpath(@__DIR__,"../data/ridgecrest-PGV.arrow"),PGA)
+Arrow.write(joinpath(@__DIR__,"../data/baja-PGV.arrow"),PGA)

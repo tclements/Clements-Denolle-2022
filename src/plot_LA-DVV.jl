@@ -97,6 +97,14 @@ ttmean = ncread(filename,"t")
 ttmean = Date.(Dates.unix2datetime.(ttmean))
 ttmeanday = (ttmean .- ttmean[1]) ./ Day(1)
 
+# load GRACE data 
+filename = joinpath(@__DIR__,"../data/CSR_GRACE_GRACE-FO_RL06_Mascons_all-corrections_v02.nc")
+tlwe = Date(2002,1,1) .+ Day.(floor.(ncread(filename,"time")))
+lwe = ncread(filename, "lwe_thickness")
+lwelon = ncread(filename,"lon")
+lwelat = ncread(filename,"lat")
+lwelon[end ÷ 2 + 1: end]  .-= 360
+
 # load files 
 LA1 = CSV.File(joinpath(@__DIR__,"../data/LA-stations-1.txt"),delim="|") |> DataFrame
 LA2 = CSV.File(joinpath(@__DIR__,"../data/LA-stations-2.txt"),delim="|") |> DataFrame
@@ -134,81 +142,38 @@ ind2 = sortperm(LJRdist2,rev=true)
 LA1 = LA1[ind1,:]
 LA2 = LA2[ind2,:]
 
-# load GPS + InSAR data 
-IGdf = CSV.File(joinpath(@__DIR__,"../data/Shen-2020-InSar-GPS.txt"),delim=" ",ignorerepeated=true) |> DataFrame
-
-# load GPS only data 
-GPSdf = CSV.File(joinpath(@__DIR__,"../data/Shen-2020-GPS.txt"),delim=" ",ignorerepeated=true) |> DataFrame
-
-# load GPS only data 
-GPSdf = CSV.File(joinpath(@__DIR__,"../data/dispUgrid_20210625.dat"),delim="\t",ignorerepeated=true,header=[:long,:lat,:Vu,:dVu]) |> DataFrame
-
-# interpolate InSAR + GPS onto standard grid 
-spacing = 0.02
-IGminlat = minimum(IGdf[:,:lat]) 
-IGmaxlat = maximum(IGdf[:,:lat])
-IGminlon = minimum(IGdf[:,:long])
-IGmaxlon = maximum(IGdf[:,:long])
-IGlon = IGminlon:spacing:IGmaxlon
-IGlat = IGminlat:spacing:IGmaxlat
-
-# Interpolate GPS onto standard grid 
-Gminlat = minimum(GPSdf[:,:lat]) 
-Gmaxlat = maximum(GPSdf[:,:lat])
-Gminlon = minimum(GPSdf[:,:long])
-Gmaxlon = maximum(GPSdf[:,:long])
-Glon = Gminlon:spacing:Gmaxlon
-Glat = Gminlat:spacing:Gmaxlat
-
-# fill measurements into grid 
-GPS = zeros(length(Glat),length(Glon))
-for ii in 1:size(GPS,1)
-    for jj in 1:size(GPS,2)
-        # calculate distance from each point 
-        dists = sqrt.(abs2.(Glon[jj] .- GPSdf[:,:long]) .+ abs2.(Glat[ii] .- GPSdf[:,:lat]))
-        # find minimum distance 
-        dmin = argmin(dists)
-        if dists[dmin] .< 1e-3 
-            GPS[ii,jj] = GPSdf[dmin,:Vu]
-        end
-    end
-end
-
-# fill missing values 
-INSARGPS[iszero.(INSARGPS)] .= NaN
-IGgrd = GMT.mat2grid(INSARGPS,IGlon,IGlat)
-GPS[iszero.(GPS)] .= NaN
-GPSgrd = GMT.mat2grid(deepcopy(GPS),Glon,Glat)
-GPSgrd.z[GPSgrd.z .< -3] .= -2.99
-GPSgrd.z[GPSgrd.z .> 3] .= 2.99
+# read LWE for LA 
+ind2006 = findfirst(tlwe .>= Date(2006,1,1))
+ind2021 = length(tlwe)
+G2006 = GMT.gmtread(filename,layer=ind2006,varname="lwe_thickness")
+G2021 = GMT.gmtread(filename,layer=ind2021,varname="lwe_thickness")
 
 # plot with GMT 
 gray = GMT.makecpt(color=150, range=(-10000,10000), no_bg=:true);
-CIG = GMT.makecpt(T=(-4,4,3 / 21), cmap=:polar);
+CGRACE = GMT.makecpt(T=(-30,30,30 / 101), cmap=:vik, reverse=true);
 GMT.grdimage(
-        "@srtm_relief_01s",
-        cmap=gray, 
-        J=:guess,
-        shade=true,
-        region=(LAminlon,LAmaxlon,LAminlat,LAmaxlat),
-        coast=true,
-        colorbar=false,
-     )
-# GMT.grdimage!(
-#         GPSgrd,
-#         cmap=CIG,
-#         alpha=40,
-#         colorbar=false,
-#         Q=true,
-# )
+    "@srtm_relief_01s",
+    cmap=gray, 
+    J=:guess,
+    shade=true,
+    region=(LAminlon,LAmaxlon,LAminlat,LAmaxlat),
+    coast=true,
+    colorbar=false,
+)
+GMT.grdimage!(
+    (G2021 .- G2006),
+    cmap=CGRACE,
+    alpha=50,
+    colorbar=false,
+)
 GMT.coast!(
     N=2,
     ocean=:white,
 )
-# GMT.colorbar!(
-#     C=CIG,
-#     frame=(annot=:auto, ticks=:auto, xlabel="Vertical Velocity [mm/yr]"), 
-# )
+GMT.colorbar!(
+    C=CGRACE,
+    frame=(annot=:auto, ticks=:auto, xlabel="LWE Change [cm]"), 
+)
 GMT.scatter!(
     LA[:,:Longitude],
     LA[:,:Latitude],
@@ -231,7 +196,6 @@ GMT.text!(
     show=true,
     savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/LA-map.png"),
 )
-
 
 # plot dv/v in LA 
 Xticks = Date(2006):Year(2):Date(2021)
@@ -278,9 +242,18 @@ Plots.plot!(
     lw=5,
     label="",
 )
+Plots.plot!(
+    p2,
+    [Date(2009),Date(2012,6,1)],
+    [2.5, 2.5],
+    color=:dodgerblue,
+    lw=2,
+    label="",
+)
 Plots.annotate!((Date(2021,6,1),size(LA1,1) * 10 + 5.5,Plots.text("1",10)))
 Plots.annotate!((Date(2021,6,1),size(LA1,1) * 10 - 5.5,Plots.text("-1",10)))
 Plots.annotate!((Date(2022,2,1),size(LA1,1) * 10 ,Plots.text("dv/v [%]",10,rotation = 90,:bold)))
+Plots.annotate!((Date(2016,4,1),2.5,Plots.text("Scaled LWE",10)))
 for ii in 1:size(LA1,1)
     df = Arrow.Table(LA1[ii,:FILES]) |> DataFrame 
     df = df[df[:,:DATE] .> Date(2006),:]
@@ -288,12 +261,44 @@ for ii in 1:size(LA1,1)
         p2,
         df[:,:DATE],
         df[:,:DVV] .* 5 .+ 10 * ii,
-        alpha=df[:,:CC] .^ 3 ./ 20,
+        # alpha=df[:,:CC] .^ 3 ./ 20,
+        alpha = 0.04,
         # markerz=df[:,:CC] .^ 3,
         c=Plots.theme_palette(:auto)[ii],
         label="",
         colorbar=false,
         markersize=3,
+    )
+
+    # get lwe time series 
+    lonind = argmin(abs.(lwelon .- LA1[ii,:LON]))
+    latind = argmin(abs.(lwelat .- LA1[ii,:LAT]))
+    stalwe = lwe[lonind,latind,:] 
+    # remove mean from 2002-2017 and 2018 - 2021
+    stalwe .-= mean(stalwe)
+    scaling = quantile(abs.(stalwe),0.95) ./ quantile(abs.(df[:,:DVV]),0.95)
+    stalwe ./= scaling
+
+    # plot 2002-2017
+    Plots.plot!(
+        p2,
+        tlwe[1:163], 
+        -stalwe[1:163] .* 5 .+ 10 * ii,
+        lw=2, 
+        alpha=0.85,
+        label="",
+        color=:dodgerblue,
+    )
+
+    # plot 2018-2021
+    Plots.plot!(
+        p2,
+        tlwe[164:end], 
+        -stalwe[164:end] .* 5 .+ 10 * ii,
+        lw=2, 
+        alpha=0.85,
+        label="",
+        color=:dodgerblue,
     )
 end
 
@@ -340,19 +345,51 @@ for ii in 1:size(LA2,1)
         p3,
         df[:,:DATE],
         df[:,:DVV] .* 5 .+ 10 * ii,
-        alpha=df[:,:CC] .^ 3 ./ 20,
+        # alpha=df[:,:CC] .^ 3 ./ 20,
+        alpha = 0.04,
         # markerz=df[:,:CC] .^ 3,
         c=Plots.theme_palette(:auto)[ii + 8],
         label="",
         colorbar=false,
         markersize=3,
     )
+
+    # get lwe time series 
+    lonind = argmin(abs.(lwelon .- LA2[ii,:LON]))
+    latind = argmin(abs.(lwelat .- LA2[ii,:LAT]))
+    stalwe = lwe[lonind,latind,:] 
+    # remove mean from 2002-2017 and 2018 - 2021
+    stalwe .-= mean(stalwe)
+    scaling = quantile(abs.(stalwe),0.95) ./ quantile(abs.(df[:,:DVV]),0.95)
+    stalwe ./= scaling
+
+    # plot 2002-2017
+    Plots.plot!(
+        p3,
+        tlwe[1:163], 
+        -stalwe[1:163] .* 5 .+ 10 * ii,
+        lw=2, 
+        alpha=0.85,
+        label="",
+        color=:dodgerblue,
+    )
+
+    # plot 2018-2021
+    Plots.plot!(
+        p3,
+        tlwe[164:end], 
+        -stalwe[164:end] .* 5 .+ 10 * ii,
+        lw=2, 
+        alpha=0.85,
+        label="",
+        color=:dodgerblue,
+    )
 end
 Plots.yticks!(p3,(10:10:10*size(LA2,1),LA2[:,:NETSTA]))
 
 l1 = Plots.@layout [a b]
 Plots.plot(p2,p3,layout=l1,size=(600,800),dpi=500)
-Plots.savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/LA-dvv.png"))
+Plots.savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/LA-dvv-lwe.png"))
 
 # plot dv/v & Elastic Component in LA 
 Xticks = Date(2006):Year(2):Date(2021)

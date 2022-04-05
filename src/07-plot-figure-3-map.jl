@@ -18,8 +18,8 @@ CAminlon, CAmaxlon = [-125,-113.5]
 CAminlat, CAmaxlat = [32,43]
 
 # GWL location 
-GWLlon = [-118.866718, -118.8161, -118.820786, -118.8624] 
-GWLlat = [34.824446, 34.850942, 34.848739, 34.83199] 
+GWLlon = [-118.8161] 
+GWLlat = [34.850942] 
 
 # get precip location 
 filename = joinpath(@__DIR__,"../data/ppt.nc")
@@ -79,8 +79,8 @@ LJRNlon = WNAMloc[LJRNind,:LON]
 LJRNlat = WNAMloc[LJRNind,:LAT]
 
 # plot station map first 
-topo = makecpt(color=:geo, range=(0,5000,500), continuous=true);
-grdimage(
+topo = GMT.makecpt(color=:geo, range=(0,5000,500), continuous=true);
+GMT.grdimage(
     "@srtm_relief_01s", 
     J=:guess,
     shade=true,
@@ -91,18 +91,18 @@ grdimage(
     conf=(MAP_FRAME_TYPE="fancy+", MAP_GRID_PEN_PRIMARY="thinnest,black,.",FONT_ANNOT_PRIMARY="+16"),
     dpi=250,
 )
-plot!(
+GMT.plot!(
     I5lon,
     I5lat,
     linecolor=:black,
     lw=2,
 )
-plot!(
+GMT.plot!(
     pptrect,
     lw=2,
     linecolor=:chartreuse,
 )
-plot!(
+GMT.plot!(
     GRACErect,
     lw=2,
     linecolor=:gold,
@@ -117,7 +117,7 @@ plot!(
 #     markersize=0.5,
 #     ml=1,
 # )
-scatter!(
+GMT.scatter!(
     [LJRlon],
     [LJRlat],
     marker=:circle, 
@@ -125,7 +125,7 @@ scatter!(
     ml=(1.25,:dodgerblue), 
     linestyle="--",
 )
-scatter!(
+GMT.scatter!(
     [LJRlon],
     [LJRlat],
     marker=:circle, 
@@ -134,7 +134,7 @@ scatter!(
     linestyle="--",
 )
 
-scatter!(
+GMT.scatter!(
     [LJRlon],
     [LJRlat],
     mc=:gold,
@@ -142,7 +142,7 @@ scatter!(
     marker="t",
     markersize=0.5,
 )
-scatter!(
+GMT.scatter!(
     GWLlon,
     GWLlat,
     mc=:lightskyblue,
@@ -150,9 +150,9 @@ scatter!(
     marker="circle",
     markersize=0.3,
 )
-basemap!(inset=(anchor=:BL, width=0.1, offset=(0.5, 0.5), save="xx000"))
+GMT.basemap!(inset=(anchor=:BL, width=0.1, offset=(0.5, 0.5), save="xx000"))
 t = readdlm("xx000")
-coast!(region=[CAminlon CAmaxlon CAminlat CAmaxlat], proj=:merc,
+GMT.coast!(region=[CAminlon CAmaxlon CAminlat CAmaxlat], proj=:merc,
            land=:lightgray, area=5000, shore=:faint, ocean=:dodgerblue,
            x_off=t[1], y_off=t[2],
            N="a",
@@ -160,7 +160,7 @@ coast!(region=[CAminlon CAmaxlon CAminlat CAmaxlat], proj=:merc,
            frame=:bare,
            DCW=(state="CA", fill=:bisque),
 )
-scatter!(
+GMT.scatter!(
      [LJRlon],
      [LJRlat],
      marker=:triangle,

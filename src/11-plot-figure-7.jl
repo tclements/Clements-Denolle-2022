@@ -26,7 +26,7 @@ end
 
 # get WES lat, lon from CI station locations 
 SCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/CIstations.csv")))
-NCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../NCstations.csv")))
+NCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/NCstations.csv")))
 CAdf = vcat(NCdf, SCdf)
 CAdf = CAdf[findall(in(["WES","HEC","JRC2"]),CAdf[:,:Station]),:]
 
