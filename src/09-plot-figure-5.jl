@@ -97,7 +97,7 @@ arrowfiles = glob("*",joinpath(@__DIR__,"../data/DVV-90-DAY-COMP/$freqmin-$freqm
 for jj in 1:length(arrowfiles)
     # read dv/v for each station 
     DVV = Arrow.Table(arrowfiles[jj]) |> Arrow.columntable |> DataFrame
-    ind = findall(Date(2005,1,1) .< DVV[:,:DATE] .< Date(2005,5,1))
+    ind = findall(Date(2004,10,1) .< DVV[:,:DATE] .< Date(2005,5,1))
     # only keep stations with > 2 years of data after 2012 
     if length(ind) < mindays
         continue 
@@ -231,14 +231,14 @@ GMT.plot!(
     ls=:dashed
 )
 GMT.plot!(
-    [LAminlon LAmaxlat; -119.65 38.9],
+    [LAminlon LAmaxlat; -119.45 39.01],
     region=(minlon,maxlon,minlat,maxlat), 
     lw=1,
     ls=:dashed,
     alpha=15,
 )
 GMT.plot!(
-    [LAmaxlon LAmaxlat; -114.55 38.9],
+    [LAmaxlon LAmaxlat; -114.2 38.98],
     region=(minlon,maxlon,minlat,maxlat), 
     lw=1,
     ls=:dashed, 
@@ -246,7 +246,8 @@ GMT.plot!(
 )
 # inset map 
 tt = mapproject(region=(LAminlon,LAmaxlon,LAminlat,LAmaxlat), proj=:merc, figsize=6, map_size=true);
-mapW = tt[1].data[1];   mapH = tt[1].data[2]
+mapW = tt.data[1]
+mapH = tt.data[2]
 GMT.basemap!(inset=(size=(mapW, mapH), anchor=:TR, width=1, offset=(-6.75, -10.25), save="xx000"))
 t = readdlm("xx000")
 GMT.grdimage!(
