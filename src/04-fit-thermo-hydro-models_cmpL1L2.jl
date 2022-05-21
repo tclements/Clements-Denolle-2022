@@ -194,7 +194,7 @@ end
 # df to hold parameters 
 fitdf = DataFrame()
 
-for kk in 1:length(files)
+for kk in 328:length(files)
     file = files[kk]
     DVVdf = Arrow.Table(files[kk]) |> Arrow.columntable |> DataFrame
     sort!(DVVdf,:DATE)
@@ -515,4 +515,4 @@ for kk in 1:length(files)
 
 end
 # write to arrow 
-Arrow.write(joinpath(@__DIR__,"../data/hydro-model-$days-day_L1.arrow"),fitdf)
+Arrow.write(joinpath(@__DIR__,"../data/hydro-model-$days-day_L1_1.arrow"),fitdf)
