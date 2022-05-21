@@ -100,8 +100,6 @@ SCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/CIstations.csv")))
 NCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/NCstations.csv")))
 CAdf = vcat(NCdf, SCdf)
 
-# df to hold parameters 
-fitdf = DataFrame()
 
 # constants for models 
 r = 500.
@@ -160,8 +158,6 @@ function modelElasticL1(p)
     return  sum(abs.((ypred .- DVVimpute[:,:DVV]) ))
 end
 
-
-
 function modelFC(p)
     FC = fullycoupled(precip[tminind:tmaxind],p[3],α,r,δt)
     FC .-= mean(FC)
@@ -195,6 +191,9 @@ function modelDrainedL1(p)
     return  sum(abs.(ypred .- DVVimpute[:,:DVV]) )
 end    
 
+# df to hold parameters 
+fitdf = DataFrame()
+
 for kk in 1:length(files)
     file = files[kk]
     DVVdf = Arrow.Table(files[kk]) |> Arrow.columntable |> DataFrame
@@ -224,6 +223,12 @@ for kk in 1:length(files)
     latind = argmin(abs.(lat .- stalat))
     precip = ppt[latind,lonind,:]
     temp = tmean[latind,lonind,:]
+
+    # skip  if nan or constant vallues (out of bounds for PRISM)
+    if any(isnan.(temp)) || std(temp)==0 || any(isnan.(precip)) || std(precip)==0
+        continue
+    end
+
     temp .-= mean(temp)
     temp ./= std(temp)
     smoothtemp = smooth_withfiltfilt(temp,window_len=days÷2)
@@ -267,8 +272,8 @@ for kk in 1:length(files)
     E = elastic(precip[tminind:tmaxind],pE[3],α,r,δt)
     E .-= mean(E)
     E ./= std(E)
-    ypredElastic = pE[1] .+ pE[2] .* E .+ pE[4] .* smoothtemp[tempind .- round(Int,pE[5])]
-    corEL1 = cor(ypredElastic,DVVimpute[:,:DVV])
+    ypredElastic1 = pE[1] .+ pE[2] .* E .+ pE[4] .* smoothtemp[tempind .- round(Int,pE[5])]
+    corEL1 = cor(ypredElastic1,DVVimpute[:,:DVV])
     r2EL1 = corEL1 ^ 2
 
     # solve for fully-coupled model 
@@ -302,8 +307,8 @@ for kk in 1:length(files)
     FC = fullycoupled(precip[tminind:tmaxind],pFC[3],α,r,δt)
     FC .-= mean(FC)
     FC ./= std(FC)
-    ypredFC = pFC[1] .+ pFC[2] .* FC .+ pFC[4] .* smoothtemp[tempind .- round(Int,pFC[5])]
-    corFCL1 = cor(ypredFC,DVVimpute[:,:DVV])
+    ypredFC1 = pFC[1] .+ pFC[2] .* FC .+ pFC[4] .* smoothtemp[tempind .- round(Int,pFC[5])]
+    corFCL1 = cor(ypredFC1,DVVimpute[:,:DVV])
     r2FCL1 = corFCL1 ^ 2
 
     # solve for drained model 
@@ -336,8 +341,8 @@ for kk in 1:length(files)
     D = drained(precip[tminind:tmaxind],pD[3],r,δt)
     D .-= mean(D)
     D ./= std(D)
-    ypredDrained = pD[1] .+ pD[2] .* D .+ pD[4] .* smoothtemp[tempind .- round(Int,pD[5])]
-    corDL1 = cor(ypredDrained,DVVimpute[:,:DVV])
+    ypredDrained1 = pD[1] .+ pD[2] .* D .+ pD[4] .* smoothtemp[tempind .- round(Int,pD[5])]
+    corDL1 = cor(ypredDrained1,DVVimpute[:,:DVV])
     r2DL1 = corDL1 ^ 2
 
     # solve for baseflow model 
@@ -371,8 +376,8 @@ for kk in 1:length(files)
     ssw = SSW06(precip[tminind:tmaxind],ϕ,pS[3])
     ssw .-= mean(ssw)
     ssw ./= std(ssw)
-    ypredSSW = pS[1] .+ pS[2] .* ssw .+ pS[4] .* smoothtemp[tempind .- round(Int,pS[5])]
-    corSSWL1 = cor(ypredSSW,DVVimpute[:,:DVV])
+    ypredSSW1 = pS[1] .+ pS[2] .* ssw .+ pS[4] .* smoothtemp[tempind .- round(Int,pS[5])]
+    corSSWL1 = cor(ypredSSW1,DVVimpute[:,:DVV])
     r2SSWL1 = corSSWL1 ^ 2
 
 
@@ -406,8 +411,8 @@ for kk in 1:length(files)
     cdmk = CDM(precip[tminind-ceil(Int,pC[3]):tmaxind],ceil(Int,pC[3]))[ceil(Int,pC[3])+1:end]
     cdmk .-= mean(cdmk)
     cdmk ./= std(cdmk)
-    ypredCDM = pC[1] .+ pC[2] .* cdmk .+ pC[4] .* smoothtemp[tempind .- round(Int,pC[5])]
-    corCDML1 = cor(ypredCDM,DVVimpute[:,:DVV])
+    ypredCDM1 = pC[1] .+ pC[2] .* cdmk .+ pC[4] .* smoothtemp[tempind .- round(Int,pC[5])]
+    corCDML1 = cor(ypredCDM1,DVVimpute[:,:DVV])
     r2CDML1 = corCDML1 ^ 2
 
     # fitted dvv 
@@ -421,9 +426,14 @@ for kk in 1:length(files)
             :DRAINED=>ypredDrained,
             :FC=>ypredFC,
             :SSW=>ypredSSW,
+            :CDM1=>ypredCDM1,
+            :ELASTIC1=>ypredElastic1,
+            :DRAINED1=>ypredDrained1,
+            :FC1=>ypredFC1,
+            :SSW1=>ypredSSW1,
         )
     )
-    fitpath = joinpath(FITDIR,netsta*"_L1.arrow")
+    fitpath = joinpath(FITDIR,netsta*"_L2_L1.arrow")
     Arrow.write(fitpath,stationdf)
     
     # write to disk 
@@ -457,29 +467,33 @@ for kk in 1:length(files)
                 :SSW3=>pS[3],
                 :SSW4=>pS[4],
                 :SSW5=>pS[5],
-                :corEL1=>corEL1,
-                :corDL1=>corDL1,
-                :corFCL1=>corFCL1,
-                :corCDML1=>corCDML1,
-                :corSSWL1=>corSSWL1,
                 :r2EL1=>r2EL1,
                 :r2DL1=>r2DL1,
                 :r2FCL1=>r2FCL1,
                 :r2CDML1=>r2CDML1,
                 :r2SSWL1=>r2SSWL1,
+                :r2E=>r2E,
+                :r2D=>r2D,
+                :r2FC=>r2FC,
+                :r2CDM=>r2CDM,
+                :r2SSW=>r2SSW,
                 :LAT=>stalat,
                 :LON=>stalon,
                 :ELEV=>staele,
             )
         )
     )
+
+    if isnan(r2E)
+        break
+    end
     println("$(netsta)")
     println("--------------------")
-    println("Elastic = $(round(corE,digits=2)),$(round(corEL1,digits=2)) ")
-    println("Drained = $(round(corD,digits=2)), $(round(corDL1,digits=2)) ")
-    println("Fully-Coupled = $(round(corFC,digits=2)),$(round(corFCL1,digits=2)) ")
-    println("CDM = $(round(corCDM,digits=2)),$(round(corCDML1,digits=2)) ")
-    println("SSW = $(round(corSSW,digits=2)), $(round(corSSWL1,digits=2)) \n\n")
+    println("Elastic = $(round(r2E,digits=2)),$(round(r2EL1,digits=2)) ")
+    println("Drained = $(round(r2D,digits=2)), $(round(r2DL1,digits=2)) ")
+    println("Fully-Coupled = $(round(r2FC,digits=2)),$(round(r2FCL1,digits=2)) ")
+    println("CDM = $(round(r2CDM,digits=2)),$(round(r2CDML1,digits=2)) ")
+    println("SSW = $(round(r2SSW,digits=2)), $(round(r2SSWL1,digits=2)) \n\n")
 
     # plot each model 
     plot(DVVimpute[:,:DATE],
