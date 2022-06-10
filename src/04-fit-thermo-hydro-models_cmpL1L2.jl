@@ -322,7 +322,7 @@ for kk in 328:length(files)
         # solve for drained model 
         resDrained = optimize(
             modelDrained, 
-            [-Inf,-Inf,5e-5,-Inf,0],
+            [-Inf,-Inf,1e-5,-Inf,0],
             [Inf,Inf,100.0,Inf,200],
             [0.0, -0.001,0.01,1.0,55],
             Fminbox(LBFGS()),
@@ -339,7 +339,7 @@ for kk in 328:length(files)
         # solve for drained model 
         resDrained = optimize(
             modelDrainedL1, 
-            [-Inf,-Inf,5e-5,-Inf,0],
+            [-Inf,-Inf,1e-5,-Inf,0],
             [Inf,Inf,100.0,Inf,200],
             [0.0, -0.001,0.01,1.0,55],
             Fminbox(LBFGS()),
@@ -356,7 +356,7 @@ for kk in 328:length(files)
         # solve for baseflow model 
         resSSW = optimize(
             modelSSW, 
-            [-Inf,-Inf,5e-5,-Inf,0],
+            [-Inf,-Inf,1e-5,-Inf,0],
             [Inf,Inf,1.,Inf,200],
             [0.0, -0.001,0.01,1.0,55],
             Fminbox(LBFGS()),
@@ -374,7 +374,7 @@ for kk in 328:length(files)
         # solve for baseflow model 
         resSSW = optimize(
             modelSSWL1, 
-            [-Inf,-Inf,5e-5,-Inf,0],
+            [-Inf,-Inf,1e-5,-Inf,0],
             [Inf,Inf,1.,Inf,200],
             [0.0, -0.001,0.01,1.0,55],
             Fminbox(LBFGS()),
@@ -585,11 +585,11 @@ println("number of stations where Drain beats SSW  "*"$(sum((fitdf[:,:r2D] -fitd
 #some Plots
 
 
-Plots.scatter(fitdf[:,:LON],fitdf[:,:LAT],zcolor=(fitdf[:,:r2DL1]),
-title="R2 for drained model",color=:bilbao,
-colorbar_title="(R2)",legend=false,colorbar=true)
-savefig("../data/FINAL-FIGURES/scatter_r2_drained.png")
+# Plots.scatter(fitdf[:,:LON],fitdf[:,:LAT],zcolor=(fitdf[:,:r2DL1]),
+# title="R2 for drained model",color=:bilbao,
+# colorbar_title="(R2)",legend=false,colorbar=true)
+# savefig("../data/FINAL-FIGURES/scatter_r2_drained.png")
 
 
-# Plots.histogram(fitdf[:,:r2D]-fitdf[:,:r2E])
+# # Plots.histogram(fitdf[:,:r2D]-fitdf[:,:r2E])
 # @df fitdf plot(:r2E)

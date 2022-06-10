@@ -46,6 +46,13 @@ for ii in 1:length(VS30)
     VS30[ii] = dataset[jj,kk,1]
 end
 
+# find which model is beats
+for i in 1:length(fitdf[:,:LAT])
+    AA = [fitdf[i,:r2DL1], fitdf[i,:r2EL1],fitdf[i,:r2DCL1],fitdf[i,:r2CDML1],fitdf[i,:r2SSWL1]]
+
+
+end
+
 
 # first ignore the stations where the diffusivity was found to reach the bounds.
 Xlat = convert(Vector,fitdf.LAT)
@@ -54,13 +61,41 @@ Xr2 = convert(Vector,fitdf.r2DL1)
 XC = convert(Vector,fitdf.D3)
 XT = convert(Vector,fitdf.D5)
 Sind = findall(fitdf[:,:D3] .< 10.)
+Sind2 = findall(fitdf[:,:D3] .> 10.)
 
 # plot diffusivity
 Plots.scatter(Xlon[Sind],Xlat[Sind],zcolor=log10.(XC[Sind]),
-    title="Diffusivity in Drained model",
+    title="Diffusivity in Drained model",markeralpha=fitdf[Sind,:r2DL1],
     colorbar_title="(log_{10} (m^2/s)",legend=false,colorbar=true)
 savefig("../data/FINAL-FIGURES/scatter_plot_diffusivity.png")
 
+
+
+# plot diffusivity
+Plots.scatter(Xlon[Sind2],Xlat[Sind2],zcolor=log10.(fitdf[Sind2,:E3]),
+    title="Diffusivity in Drained model",markeralpha=fitdf[Sind2,:r2EL1],
+    colorbar_title="(log_{10} (m^2/s)",legend=false,colorbar=true)
+savefig("../data/FINAL-FIGURES/scatter_plot_diffusivity_E.png")
+
+
+# Are the diffusivity values reasonable?
+#seismic wavelength ^2 / day 
+# Plots.scatter(Xlon[Sind],Xlat[Sind],zcolor=((1.5.*VS30[Sind]./3).^2/(3600*24)),
+#     title="\lambda^2/day",color=:jet,
+#     colorbar_title="(days)",legend=false,colorbar=true)
+Plots.histogram(sqrt.(fitdf[Sind,:D3].*3600*24))
+Plots.scatter(Xlon[Sind],Xlat[Sind],zcolor=log10.(sqrt.(fitdf[Sind,:D3].*3600*24)),
+    title="Diffusion distance per day",markeralpha=fitdf[Sind,:r2DL1],
+    colorbar_title="(log_{10} (m)",legend=false,colorbar=true)
+savefig("../data/FINAL-FIGURES/scatter_plot_diffusion_distance_per_day.png")
+
+
+
+# plot temp delay
+Plots.scatter(Xlon[Sind2],Xlat[Sind2],zcolor=log10.(fitdf[Sind2,:E3]),
+    title="Diffusivity for elastic model",color=:bilbao,markeralpha=fitdf[Sind2,:r2EL1],
+    colorbar_title="(days)",legend=false,colorbar=true)
+savefig("../data/FINAL-FIGURES/scatter_diff_E.png")
 
 # plot temp delay
 Plots.scatter(Xlon[Sind],Xlat[Sind],zcolor=(XT[Sind]),
@@ -102,11 +137,12 @@ savefig("../data/FINAL-FIGURES/scatter_r2_ssw.png")
 
 # 
 
+
 # plot temp vs hydro
 tempcomp = abs.(fitdf[:,:D4]) ./ (abs.(fitdf[:,:D4]) .+  abs.(fitdf[:,:D2]))
 tt=(tempcomp[Sind] .- 0.5) .*2
 Plots.scatter(Xlon[Sind],Xlat[Sind],zcolor=tt,
-    title="Temp vs hydro",color=:bluesreds,
+    title="Temp vs hydro",color=:bluesreds,markeralpha=fitdf[Sind,:r2EL1],
     colorbar_title="",legend=false,colorbar=true)
 savefig("../data/FINAL-FIGURES/scatter_plot_temp_vs_hydro.png")
 
