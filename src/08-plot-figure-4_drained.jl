@@ -47,12 +47,16 @@ for ii in 1:length(VS30)
 end
 
 # find which model is beats
+label = ["drained","elastic","fully coupled","cdm","ssw"]
+AAmax = zeros(length(VS30))
 for i in 1:length(fitdf[:,:LAT])
-    AA = [fitdf[i,:r2DL1], fitdf[i,:r2EL1],fitdf[i,:r2DCL1],fitdf[i,:r2CDML1],fitdf[i,:r2SSWL1]]
-
-
+    AA = [fitdf[i,:r2DL1], fitdf[i,:r2EL1],fitdf[i,:r2FCL1],fitdf[i,:r2CDML1],fitdf[i,:r2SSWL1]]
+    AAmax[i]=argmax(AA)
+    println(AAmax[i])
 end
 
+# number of stations that have the drained model as the best model:
+sum(AAmax.==1.0)
 
 # first ignore the stations where the diffusivity was found to reach the bounds.
 Xlat = convert(Vector,fitdf.LAT)

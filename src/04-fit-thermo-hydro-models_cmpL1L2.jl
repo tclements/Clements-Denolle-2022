@@ -444,6 +444,9 @@ for kk in 328:length(files)
         fitpath = joinpath(FITDIR,netsta*"_L2_L1.arrow")
         Arrow.write(fitpath,stationdf)
         
+
+
+        
         # write to disk 
         append!(
             fitdf,
@@ -593,3 +596,40 @@ println("number of stations where Drain beats SSW  "*"$(sum((fitdf[:,:r2D] -fitd
 
 # # Plots.histogram(fitdf[:,:r2D]-fitdf[:,:r2E])
 # @df fitdf plot(:r2E)
+# find which model fits best 
+# fitdf = Arrow.Table(joinpath(@__DIR__,"../data/hydro-model-90-day_L12.arrow")) |> Arrow.columntable |> DataFrame
+# labels=["drained","elastic","fullycoupled","cdmk","ssw"]
+# c=["sienna","darkgreen","purple","cyan","coral"]
+# cc=Array{String}(undef,length(fitdf[:,:r2D]))
+# for i in 1:length(fitdf[:,:r2D])
+#     println(i)
+#     ik=findmax([fitdf[i,:r2DL1],fitdf[i,:r2EL1],fitdf[i,:r2FCL1],fitdf[i,:r2CDML1],fitdf[i,:r2SSWL1]])[2]
+#     cc[i]=(c[ik])
+#     println(cc[i])
+# end
+
+# minlon = floor(minimum(fitdf[:,:LON]))
+# maxlon = ceil(maximum(fitdf[:,:LON]))
+# minlat = floor(minimum(fitdf[:,:LAT]))
+# maxlat = ceil(maximum(fitdf[:,:LAT])) - 0.75 
+# # first ignore the stations where the diffusivity was found to reach the bounds.
+# Xlat = convert(Vector,fitdf.LAT)
+# Xlon = convert(Vector,fitdf.LON)
+# # plot diffusivity
+# Sind = findall(fitdf[:,:D3] .< 10.)
+# Plots.scatter(Xlon[Sind],Xlat[Sind],color=cc[Sind],
+#     title="which model",markeralpha=fitdf[Sind,:r2DL1],
+#    legend=true)
+# savefig("../data/FINAL-FIGURES/scatter_plot_model.png")
+
+# N=length(fitdf[:,:r2D])
+# # number of best drained models: 48.2%
+# length(filter(y->(y=="sienna"),cc))/N
+# # number of best elastic models: 7.0%
+# length(filter(y->(y=="darkgreen"),cc))/N
+# # number of best fc models: 7.6% 
+# length(filter(y->(y=="purple"),cc))/N
+# # number of best cdm models: 18.9%
+# length(filter(y->(y=="cyan"),cc))/N
+# # number of best ssw models: 18.4%
+# length(filter(y->(y=="coral"),cc))/N
