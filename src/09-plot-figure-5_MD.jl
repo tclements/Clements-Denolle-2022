@@ -32,6 +32,7 @@ function smooth_withfiltfilt(A::AbstractArray; window_len::Int=11, window::Symbo
     return A
 end
 
+######################### station data ################## 
 #load station locations 
 NCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/NCstations.csv")))
 SCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/CIstations.csv")))
@@ -43,6 +44,8 @@ LAmaxlon = -116.5
 LAminlat = 32.75 
 LAmaxlat = 34.75 
 
+
+######################### play with Grace data ################## 
 # load GRACE data 
 # from http://www2.csr.utexas.edu/grace/RL06_mascons.html
 filename = joinpath(@__DIR__,"../data/CSR_GRACE_GRACE-FO_RL06_Mascons_all-corrections_v02.nc")
@@ -89,6 +92,7 @@ G2020 = gmtread(filename,layer=ind2020,varname="lwe_thickness")
 # load fitted values 
 fitdf = Arrow.Table(joinpath(@__DIR__,"../data/hydro-model-90-day.arrow")) |> Arrow.columntable |> DataFrame
 
+######################### play with temperature data ##################
 # load temperature values 
 filename2 = joinpath(@__DIR__,"../data/tmean.nc")
 pptlon = ncread(filename2,"lon")
@@ -98,7 +102,7 @@ ttmean = ncread(filename2,"t")
 ttmean = Date.(Dates.unix2datetime.(ttmean))
 ttmeanday = (ttmean .- ttmean[1]) ./ Day(1)
 
-
+######################### play with precipitation data ##################
 # load precip data 
 filename = joinpath(@__DIR__,"../data/ppt.nc")
 plon = ncread(filename,"lon")
@@ -134,9 +138,24 @@ for i in 1:length(cummprecip[:,1,1])
 end
 Plots.heatmap(plon,plat,precipmean/1000,xlim=(-125,-115),clim=(0,2))
 
-
+## plot to show the ratio of precipitation over mean precipitation.
 Plots.heatmap(plon,plat,-log10.(cummprecip[:,:,4]./precipmean),
 xlim=(-125,-115),clim=(-0.7,0.7),color=:bluesreds)
+
+# mean 2012-2016 data 
+precipmean_drought=zeros(size(cummprecip[:,:,1]))
+crap=0
+for i in 1:length(cummprecip[:,1,1])
+    for j in 1:length(cummprecip[1,:,1])
+        crap=cummprecip[i,j,13:17]
+        precipmean_drought[i,j]=mean(crap)
+    end
+end
+Plots.heatmap(plon,plat,-log10.(precipmean_drought[:,:]./precipmean),
+xlim=(-125,-115),clim=(-0.3,0.3),color=:bluesreds)
+
+#######################################
+
 # plot maps 2-4 Hz 
 freqmin = 2.0
 freqmax = 4.0
