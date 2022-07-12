@@ -57,6 +57,24 @@ ind2011 = findfirst(tlwe .== Date(2011,9,16))
 ind2016 = findfirst(tlwe .== Date(2016,8,21))
 ind2020 = findfirst(tlwe .== Date(2020,10,16))
 GG=ncread(filename,"lwe_thickness")
+
+# calculate the standard deviation
+Gstd=zeros(size(GG[:,:,1]))
+for i in 1:length(GG[:,1,1])
+    for j in 1:length(GG[1,:,1])
+        Gstd[i,j]=std(GG[i,j,:])
+    end
+end
+# standard deviation 
+Plots.heatmap(lon,lat,Gstd',clim=(0,20),
+xlim=(360-125,360-115),ylim=(32,40))
+
+# standard deviation 
+Plots.heatmap(lon,lat,(abs.(Gmax)./Gstd)',clim=(0,2),
+xlim=(360-125,360-115),ylim=(32,40))
+
+Gmax=GG[:,:,ind2004]-GG[:,:,ind2005e]
+
 G2004a=sum(GG[:,:,ind2004:ind2005e],dims=3)
 G2012a=sum(GG[:,:,ind2011:ind2016],dims=3)
 # p=heatmap(lat,lon,G2004a[:,:,1],clim=(-100,100),xlim=(31,40),ylim=(-125+360,-114+360),c =:redsblues)
@@ -89,10 +107,40 @@ tppt = ncread(filename,"t")
 tppt = Date.(Dates.unix2datetime.(tppt))
 ppt = ncread(filename,"ppt")
 tpptday = (tppt .- tppt[1]) ./ Day(1)
+# create time series of yearly precipitation centered on each winter
+cummprecip=zeros(size(ppt[:,:,1:21]))
+for year in 2001:2022
+    println(year)
+    ind = findall(Date(year,10,1) .< tppt.< Date(year+1,6,1))
+    for i in 1:length(ppt[:,1,1])
+        for j in 1:length(ppt[1,:,1])
+            crap=ppt[i,j,ind]
+            # print(i,j,sum(crap[crap.>0]))
+            cummprecip[i,j,year-2000]=sum(crap[crap.>0])
+        end
+    end
+end
+# cool plot of rain in 2004-2005 winter
+Plots.heatmap(plon,plat,cummprecip[:,:,4]/1000,xlim=(-125,-115),clim=(0,2))
 
+# get variability in precipitation
+precipmean=zeros(size(cummprecip[:,:,1]))
+crap=0
+for i in 1:length(cummprecip[:,1,1])
+    for j in 1:length(cummprecip[1,:,1])
+        crap=cummprecip[i,j,:]
+        precipmean[i,j]=mean(crap)
+    end
+end
+Plots.heatmap(plon,plat,precipmean/1000,xlim=(-125,-115),clim=(0,2))
+
+
+Plots.heatmap(plon,plat,-log10.(cummprecip[:,:,4]./precipmean),
+xlim=(-125,-115),clim=(-0.7,0.7),color=:bluesreds)
 # plot maps 2-4 Hz 
 freqmin = 2.0
 freqmax = 4.0
+
 
 # Oct 2004 - May 2005 
 maxgap = 15 # maximum data gap [days]
@@ -243,124 +291,51 @@ minlat = minimum(ΔDVVdf[:,:LAT]) - 0.5
 maxlat = maximum(ΔDVVdf[:,:LAT]) + 0.5
 
 
+# plot variability in dv/v
+crap =Array{Float64}(undef, length(arrowfiles))
+slat =Array{Float64}(undef, length(arrowfiles))
+slon =Array{Float64}(undef, length(arrowfiles))
+for jj in 1:length(arrowfiles)
+    # read dv/v for each station 
+    DVV = Arrow.Table(arrowfiles[jj]) |> Arrow.columntable |> DataFrame
+    crap[jj]=std(DVV[:,:DVV])
 
-# plot sensitivity of dv/v to preciptiation
+    # get station name and location 
+    netsta = replace(basename(arrowfiles[jj]),".arrow"=>"")
+    net, sta = split(netsta,".")
+    staind = findfirst(CAdf[!,:Station] .== sta)
+    if isnothing(staind)
+        println("No lat/lon for $netsta")
+        continue 
+    end
+    slat[jj] = CAdf[staind,:Latitude]
+    slon[jj] = CAdf[staind,:Longitude]
+end
+Plots.scatter(slon,slat,zcolor=crap,
+title="STD(dv/v)",color=:bilbao,markeralpha=1,
+colorbar_title="",legend=false,colorbar=true,clim=(0,0.5),
+xlim=(-125,-115),ylim=(32,42))
+savefig("../data/FINAL-FIGURES/scatter_dvvstd.png")
+
+
+# plot sensitivity of dv/v to preciptation
 Plots.scatter(ΔDVVdf[:,:LON],ΔDVVdf[:,:LAT],zcolor=-ΔDVVdf[:,:P2P]./ΔDVVdf[:,:dvvstd],
 title="Peak2Peak / STD ",color=:bilbao,markeralpha=1,
 colorbar_title="",legend=false,colorbar=true,clim=(1,5))
 savefig("../data/FINAL-FIGURES/scatter_sensitivity_of_dv.png")
 
-
-# plot diffusivity
+# plot peak2peak
 Plots.scatter(ΔDVVdf[:,:LON],ΔDVVdf[:,:LAT],zcolor=-2*ΔDVVdf[:,:P2P],
     title="Peak2Peak drop vs total precip",color=:bilbao,markeralpha=2*ΔDVVdf[:,:cumprecip],
     colorbar_title="",legend=false,colorbar=true,clim=(-1,1))
 savefig("../data/FINAL-FIGURES/scatter_plot_p2p_precip_winter2005.png")
 
 
-Plots.scatter(ΔDVVdf[:,:cumprecip],-ΔDVVdf[:,:P2P],xli=())
 
 
-# plot Δdv/v 
-colorlimit=1.0
-CDVV = GMT.makecpt(T=(-colorlimit,colorlimit,colorlimit / 101), cmap=:vik, reverse=true);
-CGRACE = GMT.makecpt(T=(-30,30,30 / 101), cmap=:vik);
-GMT.grdimage(
-    "@earth_relief_15s",
-    cmap=gray, 
-    J=:guess,
-    shade=true,
-    region=(minlon,maxlon,minlat,maxlat),
-    coast=true,
-    colorbar=false,
-    )
-GMT.coast!(
-    N="a",
-    ocean=:white,
-)
-GMT.grdimage!(
-    -(G2005a .- G2004),
-    cmap=CGRACE,
-    alpha=50,
-    colorbar=false,
-)
-GMT.scatter!(
-    ΔDVVdf[:,:LON],
-    ΔDVVdf[:,:LAT],
-    zcolor=-ΔDVVdf[:,:SLOPE],
-    markeredgecolor=:black,
-    marker=:c,
-    transparency= 15,
-    # colorbar=true,
-    cmap=CDVV,
-    markersize="6p",
-)
-GMT.colorbar!(
-    C=CDVV,
-    frame=(annot=:auto, ticks=:auto, xlabel="dv/v [%]"),
-    pos=(anchor=:BL,horizontal=true,offset=(-5.5,-2),length=5),
-)
-GMT.colorbar!(
-    C=CGRACE,
-    frame=(annot=:auto, ticks=:auto, xlabel="LWE [cm]"), 
-    pos=(anchor=:BL, horizontal=true,offset=(-5.5,-2),move_annot=true,length=5), 
-    W=-1,
-)
-rect = [LAminlon LAminlat; LAminlon LAmaxlat; LAmaxlon LAmaxlat; LAmaxlon LAminlat; LAminlon LAminlat];
-GMT.plot!(
-    rect, 
-    region=(minlon,maxlon,minlat,maxlat), 
-    lw=1,
-    ls=:dashed
-)
-GMT.plot!(
-    [LAminlon LAmaxlat; -119.45 39.01],
-    region=(minlon,maxlon,minlat,maxlat), 
-    lw=1,
-    ls=:dashed,
-    alpha=15,
-)
-GMT.plot!(
-    [LAmaxlon LAmaxlat; -114.2 38.98],
-    region=(minlon,maxlon,minlat,maxlat), 
-    lw=1,
-    ls=:dashed, 
-    alpha=15,
-)
-# inset map 
-tt = mapproject(region=(LAminlon,LAmaxlon,LAminlat,LAmaxlat), proj=:merc, figsize=6, map_size=true);
-mapW = tt.data[1]
-mapH = tt.data[2]
-GMT.basemap!(inset=(size=(mapW, mapH), anchor=:TR, width=1, offset=(-6.75, -10.25), save="xx000"))
-t = readdlm("xx000")
-GMT.grdimage!(
-    "@srtm_relief_03s",
-    cmap=gray, 
-    J=:merc,
-    shade=true,
-    region=(LAminlon,LAmaxlon,LAminlat,LAmaxlat),
-    coast=false,
-    colorbar=false,
-    xshift=t[1], yshift=t[2],
-)
-GMT.coast!(
-    shore=true, 
-    ocean=:white,
-    N="a",
-)
-GMT.scatter!(
-    ΔDVVdf[:,:LON],
-    ΔDVVdf[:,:LAT],
-    zcolor=-ΔDVVdf[:,:SLOPE],
-    markeredgecolor=:black,
-    marker=:c,
-    transparency= 15,
-    # colorbar=true,
-    cmap=CDVV,
-    markersize="4p",
-    show=1,
-    savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/DVV-2004-2005-$freqmin-$freqmax.png"),
-)
+
+
+########################################
 
 # 2012 - 2016 
 maxgap = 180 # maximum data gap [days]
@@ -448,113 +423,7 @@ for jj in 1:length(arrowfiles)
     append!(ΔDVVdf,df)
 end
 
-# plot with GMT 
-minlon = minimum(ΔDVVdf[:,:LON]) - 0.5
-maxlon = maximum(ΔDVVdf[:,:LON]) + 0.5
-minlat = minimum(ΔDVVdf[:,:LAT]) - 0.5
-maxlat = maximum(ΔDVVdf[:,:LAT]) + 0.5
-
-# plot Δdv/v 
-colorlimit=0.3
-CDVV = GMT.makecpt(T=(-colorlimit,colorlimit,colorlimit / 101), cmap=:vik, reverse=true);
-CGRACE = GMT.makecpt(T=(-15,15,15 / 101), cmap=:vik);
-GMT.grdimage(
-    "@earth_relief_15s",
-    cmap=gray, 
-    J=:guess,
-    shade=true,
-    region=(minlon,maxlon,minlat,maxlat),
-    coast=true,
-    colorbar=false,
-    )
-GMT.coast!(
-    N="a",
-    ocean=:white,
-)
-GMT.grdimage!(
-    -(G2016 .- G2011),
-    cmap=CGRACE,
-    alpha=50,
-    colorbar=false,
-)
-GMT.scatter!(
-    ΔDVVdf[:,:LON],
-    ΔDVVdf[:,:LAT],
-    zcolor=-ΔDVVdf[:,:SLOPE],
-    markeredgecolor=:black,
-    marker=:c,
-    transparency= 15,
-    # colorbar=true,
-    cmap=CDVV,
-    markersize="6p",
-)
-GMT.colorbar!(
-    C=CDVV,
-    frame=(annot=:auto, ticks=:auto, xlabel="dv/v [%]"),
-    pos=(anchor=:BL,horizontal=true,offset=(-5.5,-2),length=5),
-)
-GMT.colorbar!(
-    C=CGRACE,
-    frame=(annot=:auto, ticks=:auto, xlabel="LWE [cm]"), 
-    pos=(anchor=:BL, horizontal=true,offset=(-5.5,-2),move_annot=true,length=5), 
-    W=-1,
-)
-rect = [LAminlon LAminlat; LAminlon LAmaxlat; LAmaxlon LAmaxlat; LAmaxlon LAminlat; LAminlon LAminlat];
-GMT.plot!(
-    rect, 
-    region=(minlon,maxlon,minlat,maxlat), 
-    lw=1,
-    ls=:dashed
-)
-GMT.plot!(
-    [LAminlon LAmaxlat; -119.65 38.9],
-    region=(minlon,maxlon,minlat,maxlat), 
-    lw=1,
-    ls=:dashed,
-    alpha=15,
-)
-GMT.plot!(
-    [LAmaxlon LAmaxlat; -114.55 38.9],
-    region=(minlon,maxlon,minlat,maxlat), 
-    lw=1,
-    ls=:dashed, 
-    alpha=15,
-)
-# inset map 
-tt = mapproject(region=(LAminlon,LAmaxlon,LAminlat,LAmaxlat), proj=:merc, figsize=6, map_size=true);
-mapW = tt[1].data[1];   mapH = tt[1].data[2]
-GMT.basemap!(inset=(size=(mapW, mapH), anchor=:TR, width=1, offset=(-6.75, -10.25), save="xx000"))
-t = readdlm("xx000")
-GMT.grdimage!(
-    "@srtm_relief_03s",
-    cmap=gray, 
-    J=:merc,
-    shade=true,
-    region=(LAminlon,LAmaxlon,LAminlat,LAmaxlat),
-    coast=false,
-    colorbar=false,
-    xshift=t[1], yshift=t[2],
-)
-GMT.coast!(
-    shore=true, 
-    ocean=:white,
-    N="a",
-)
-GMT.scatter!(
-    ΔDVVdf[:,:LON],
-    ΔDVVdf[:,:LAT],
-    zcolor=-ΔDVVdf[:,:SLOPE],
-    markeredgecolor=:black,
-    marker=:c,
-    transparency= 15,
-    # colorbar=true,
-    cmap=CDVV,
-    markersize="4p",
-    show=1,
-    savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/DVV-2011-2016-$freqmin-$freqmax.png"),
-)
-
-
+#####################
 # 2005 - 2020
 maxgap = 2*365 # maximum data gap [days]
 mindays = 13 * 365 # minimum number of days needed for analysis 
