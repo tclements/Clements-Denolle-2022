@@ -1,7 +1,6 @@
 using Arrow ,CSV,  Dates, NetCDF
 using DataFrames ,DelimitedFiles, Glob
 using DSP , GLM, Interpolations, Statistics, StatsModels
-using GMT  
 using Plots
 
 
@@ -52,6 +51,17 @@ ttmean = ncread(filename2,"t")
 ttmean = Date.(Dates.unix2datetime.(ttmean))
 ttmeanday = (ttmean .- ttmean[1]) ./ Day(1)
 
+# get variability in temperatures
+tempmean=zeros(size(tmean[:,:,1]))
+crap=0
+for i in 1:length(tmean[:,1,1])
+    for j in 1:length(tmean[1,:,1])
+        crap=tmean[i,j,:]
+        tempmean[i,j]=std(crap.-mean(crap))
+    end
+end
+Plots.heatmap(pptlon,pptlat,tempmean,xlim=(-125,-115),clim=(0,2))
+
 ######################### play with precipitation data ##################
 # load precip data 
 filename = joinpath(@__DIR__,"../data/ppt.nc")
@@ -62,6 +72,19 @@ tppt = Date.(Dates.unix2datetime.(tppt))
 ppt = ncread(filename,"ppt")
 tpptday = (tppt .- tppt[1]) ./ Day(1)
 # create time series of yearly precipitation centered on each winter
+cummprecip_all=zeros(size(ppt[:,:,1:41]))
+for year in 1985:2022
+    println(year)
+    ind = findall(Date(year,10,1) .< tppt.< Date(year+1,6,1))
+    for i in 1:length(ppt[:,1,1])
+        for j in 1:length(ppt[1,:,1])
+            crap=ppt[i,j,ind]
+            cummprecip_all[i,j,year-1984]=sum(crap[crap.>0])
+        end
+    end
+end
+
+
 cummprecip=zeros(size(ppt[:,:,1:21]))
 for year in 2001:2022
     println(year)
@@ -74,9 +97,7 @@ for year in 2001:2022
     end
 end
 # cool plot of rain in 2004-2005 winter
-# Plots.heatmap(plon,plat,cummprecip[:,:,4]/1000,xlim=(-125,-115),clim=(0,2))
 
-# get variability in precipitation
 precipmean=zeros(size(cummprecip[:,:,1]))
 crap=0
 for i in 1:length(cummprecip[:,1,1])
@@ -85,6 +106,8 @@ for i in 1:length(cummprecip[:,1,1])
         precipmean[i,j]=mean(crap)
     end
 end
+
+
 # Plots.heatmap(plon,plat,precipmean/1000,xlim=(-125,-115),clim=(0,2))
 
 # ## plot to show the ratio of precipitation over mean precipitation.
@@ -112,6 +135,25 @@ for i in 1:length(cummprecip[:,1,1])
         precipmean_drought[i,j]=mean(crap)
     end
 end
+
+
+
+
+
+
+tempvsprecip=zeros(size(tempmean))
+for i in 1:length(tempmean[:,1])
+    for j in 1:length(tempmean[1,:])
+        crap=tempmean[i,j]/precipmean[i,j]
+        if isinf(mean(crap)) ||  isnan(mean(crap))
+            tempvsprecip[i,j]=0.
+        else
+            tempvsprecip[i,j]=mean(crap)
+        end
+    end
+end
+
+Plots.heatmap(pptlon,pptlat,log10.(tempvsprecip),xlim=(-125,-115))
 ########################## seismic dv/v stuff #############
 
 # load fitted values dvv 
