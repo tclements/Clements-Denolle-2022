@@ -25,3 +25,4 @@ Manifest.toml
 
 # ignore the data directory 
 data/
+src/09-plot-figure-5.jl
