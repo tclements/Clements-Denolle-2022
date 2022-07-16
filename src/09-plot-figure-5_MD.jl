@@ -321,11 +321,11 @@ end
 
 crap=-ΔDVVdf[:,:P2P]./ΔDVVdf[:,:dvvstd]
 crap2=cummprecip[:,:,4]./precipmean
-Plots.heatmap(plon,plat,-log10.(cummprecip[:,:,4]./precipmean),
-xlim=(-125,-115),clim=(-0.7,0.7),color=:bluesreds,alpha=0.75)
+display(Plots.heatmap(plon,plat,-log10.(cummprecip[:,:,4]./precipmean),
+xlim=(-125,-115),clim=(-0.7,0.7),color=:bluesreds,alpha=0.75))
 Plots.scatter!(ΔDVVdf[crap.>0,:LON],ΔDVVdf[crap.>0,:LAT],zcolor=-log10.(crap[crap.>0]),
 title="Peak2Peak / STD ",color=:bluesreds,markeralpha=1,
-colorbar_title="",legend=false,colorbar=true)
+colorbar_title="",legend=false,colorbar=true,aspect_ratio=:equal)
 savefig("../data/FINAL-FIGURES/dvv_2004.png")
 
 # # plot peak2peak
@@ -436,13 +436,15 @@ for jj in 1:length(arrowfiles)
     )
     append!(ΔDVVdf,df)
 end
-
+# error in the slope
+crap=ΔDVVdf[:,:SLOPESTD]
+err = ones(size(crap))./crap./100
 
 Plots.heatmap(plon,plat,-log10.(precipmean_drought[:,:]./precipmean),
 xlim=(-125,-115),clim=(-0.3,0.3),color=:bluesreds)
 Plots.scatter!(ΔDVVdf[:,:LON],ΔDVVdf[:,:LAT],zcolor=crap=ΔDVVdf[:,:SLOPE],
-title="Slope of dv/v and precipitation deficit",color=:bluesreds,markeralpha=1,
-colorbar_title="",legend=false,colorbar=true)
+title="Slope of dv/v and precipitation deficit",color=:bluesreds,markeralpha=crap,
+colorbar_title="",legend=false,colorbar=true,aspect_ratio=:equal)
 savefig("../data/FINAL-FIGURES/dvv_2012_2016.png")
 
 
