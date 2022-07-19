@@ -2,7 +2,7 @@ using Arrow ,CSV,  Dates, NetCDF
 using DataFrames ,DelimitedFiles, Glob
 using DSP , GLM, Interpolations, Statistics, StatsModels
 using Plots
-
+using SeisNoise
 
 ####### Some functions
 function DVVslope(df::DataFrame,ind::AbstractArray)
@@ -23,6 +23,22 @@ function smooth_withfiltfilt(A::AbstractArray; window_len::Int=11, window::Symbo
     A = DSP.filtfilt(w ./ sum(w), A)
     return A
 end
+
+###################### LWE ##############################
+# from http://www2.csr.utexas.edu/grace/RL06_mascons.html
+filename = joinpath(@__DIR__,"../data/CSR_GRACE_GRACE-FO_RL06_Mascons_all-corrections_v02.nc")
+tlwe = Date(2002,1,1) .+ Day.(floor.(ncread(filename,"time")))
+llon = ncread(filename,"lon")
+llat = ncread(filename,"lat")
+lwe = ncread(filename,"lwe_thickness")
+ind2004 = findfirst(tlwe .== Date(2004,10,16))
+ind2005a = findfirst(tlwe .== Date(2005,5,16))
+ind2005b = findfirst(tlwe .== Date(2005,10,16))
+ind2011 = findfirst(tlwe .== Date(2011,9,16))
+ind2016 = findfirst(tlwe .== Date(2016,8,21))
+ind2020 = findfirst(tlwe .== Date(2020,10,16))
+lwe_2012_2016=lwe[:,:,ind2011]-lwe[:,:,ind2016]
+
 
 ######################### station data ################## 
 #load station locations 
@@ -74,7 +90,7 @@ tpptday = (tppt .- tppt[1]) ./ Day(1)
 # create time series of yearly precipitation centered on each winter
 cummprecip_all=zeros(size(ppt[:,:,1:41]))
 for year in 1985:2022
-    println(year)
+    println(year-1984," ",year)
     ind = findall(Date(year,10,1) .< tppt.< Date(year+1,6,1))
     for i in 1:length(ppt[:,1,1])
         for j in 1:length(ppt[1,:,1])
@@ -84,57 +100,73 @@ for year in 1985:2022
     end
 end
 
-
-cummprecip=zeros(size(ppt[:,:,1:21]))
-for year in 2001:2022
-    println(year)
-    ind = findall(Date(year,10,1) .< tppt.< Date(year+1,6,1))
-    for i in 1:length(ppt[:,1,1])
-        for j in 1:length(ppt[1,:,1])
-            crap=ppt[i,j,ind]
-            cummprecip[i,j,year-2000]=sum(crap[crap.>0])
-        end
-    end
-end
-# cool plot of rain in 2004-2005 winter
-
-precipmean=zeros(size(cummprecip[:,:,1]))
+#  mean precip everywhere between 1985 and 2022
+precipmean=zeros(size(cummprecip_all[:,:,1]))
 crap=0
-for i in 1:length(cummprecip[:,1,1])
-    for j in 1:length(cummprecip[1,:,1])
-        crap=cummprecip[i,j,:]
+for i in 1:length(cummprecip_all[:,1,1])
+    for j in 1:length(cummprecip_all[1,:,1])
+        crap=cummprecip_all[i,j,1:38]
         precipmean[i,j]=mean(crap)
     end
 end
-
-
-# Plots.heatmap(plon,plat,precipmean/1000,xlim=(-125,-115),clim=(0,2))
-
-# ## plot to show the ratio of precipitation over mean precipitation.
-# Plots.heatmap(plon,plat,-log10.(cummprecip[:,:,4]./precipmean),
-# xlim=(-125,-115),clim=(-0.7,0.7),color=:bluesreds)
 
 # mean 2005-2020 data 
 precipmean_longterm=zeros(size(cummprecip[:,:,1]))
 crap=0
 for i in 1:length(cummprecip[:,1,1])
     for j in 1:length(cummprecip[1,:,1])
-        crap=cummprecip[i,j,5:end]
+        crap=cummprecip_all[i,j,21:38]
         precipmean_longterm[i,j]=mean(crap)
     end
 end
-# Plots.heatmap(plon,plat,-log10.(precipmean_drought[:,:]./precipmean),
-# xlim=(-125,-115),clim=(-0.3,0.3),color=:bluesreds)
-
 # mean 2012-2016 data 
 precipmean_drought=zeros(size(cummprecip[:,:,1]))
 crap=0
 for i in 1:length(cummprecip[:,1,1])
     for j in 1:length(cummprecip[1,:,1])
-        crap=cummprecip[i,j,13:17]
+        crap=cummprecip_all[i,j,28:31]
         precipmean_drought[i,j]=mean(crap)
     end
 end
+# 1 winter 1985
+# 2 1986
+# 3 1987
+# 4 1988
+# 5 1989
+# 6 1990
+# 7 1991
+# 8 1992
+# 9 1993
+# 10 1994
+# 11 1995
+# 12 1996
+# 13 1997
+# 14 1998
+# 15 1999
+# 16 2000
+# 17 2001
+# 18 2002
+# 19 2003
+# 20 2004
+# 21 2005
+# 22 2006
+# 23 2007
+# 24 2008
+# 25 2009
+# 26 2010
+# 27 2011
+# 28 2012
+# 29 2013
+# 30 2014
+# 31 2015
+# 32 2016
+# 33 2017
+# 34 2018
+# 35 2019
+# 36 2020
+# 37 2021
+# 38 2022
+
 
 
 
@@ -163,13 +195,31 @@ arrowfiles = glob("*",joinpath(@__DIR__,"../data/DVV-90-DAY-COMP/$freqmin-$freqm
 
 ################# overall analysis ##############
 # plot variability in dv/v
-crap =Array{Float64}(undef, length(arrowfiles))
+maxgap=20
+dvvstd =Array{Float64}(undef, length(arrowfiles))
 slat =Array{Float64}(undef, length(arrowfiles))
 slon =Array{Float64}(undef, length(arrowfiles))
 for jj in 1:length(arrowfiles)
     # read dv/v for each station 
     DVV = Arrow.Table(arrowfiles[jj]) |> Arrow.columntable |> DataFrame
-    crap[jj]=std(DVV[:,:DVV])
+    
+    # check for gaps in the data 
+    tDVV = (DVV[:,:DATE] .- DVV[1,:DATE]) ./ Day(1) .+ 1
+    if length(tDVV)<2
+        continue
+    end
+    # if maximum(diff(tDVV)) > maxgap
+    #     continue 
+    # end
+
+    data = DataFrame(X=tDVV ./ tDVV[end],Y=DVV[:,:DVV])
+    ols = lm(@formula(Y ~ X), data, wts=DVV[:,:CC] .^ 3)
+    # get relevant data 
+    inter, slope = coef(ols)
+    rtwo = r2(ols)
+    interSTD, slopeSTD = stderror(ols)
+
+    dvvstd[jj] = std(  data[:,:Y] - (inter.+slope.*data[:,:X])   )
 
     # get station name and location 
     netsta = replace(basename(arrowfiles[jj]),".arrow"=>"")
@@ -182,10 +232,8 @@ for jj in 1:length(arrowfiles)
     slat[jj] = CAdf[staind,:Latitude]
     slon[jj] = CAdf[staind,:Longitude]
 end
-Plots.scatter(slon,slat,zcolor=crap,
-title="STD(dv/v)",color=:bilbao,markeralpha=1,
-colorbar_title="",legend=false,colorbar=true,clim=(0,0.5),
-xlim=(-125,-115),ylim=(32,42))
+Plots.scatter(slon,slat,zcolor=dvvstd,title="STD(dv/v)",color=:bilbao,markeralpha=1,
+colorbar_title="",legend=false,colorbar=true,clim=(0,0.5), xlim=(-125,-115),ylim=(32,42))
 savefig("../data/FINAL-FIGURES/scatter_dvvstd.png")
 
 
@@ -289,8 +337,8 @@ for jj in 1:length(arrowfiles)
     p2p=-maximum(DVV[ind[1:ind2],:DVV])+minimum(DVV[ind[ind2+1:end],:DVV])
     println("p2p $p2p")
     println("compare this to std in dv/v")
-    dvvstd = std(DVV[:,:DVV])
-    println(p2p/dvvstd)
+    # dvvstd = crap[jj]#std(DVV[:,:DVV])
+    println(p2p/dvvstd[jj])
     # display(Plots.plot!(DVV[ind,:DATE],(DVV[ind,:DATE]-mindate)./Day(1)./365.0 .*slope.+inter))
     println("std $dvvstd")
     println("Fit between $mindate and $maxdate is $slope and peak-to-peak is $p2p")
@@ -302,7 +350,7 @@ for jj in 1:length(arrowfiles)
         INTER=inter,
         SLOPE=slope,
         P2P=p2p,
-        dvvstd=dvvstd,
+        dvvstd=dvvstd[jj],
         R2=rtwo,
         INTERSTD=interSTD,
         SLOPESTD=slopeSTD,
@@ -321,11 +369,11 @@ end
 
 crap=-ΔDVVdf[:,:P2P]./ΔDVVdf[:,:dvvstd]
 crap2=cummprecip[:,:,4]./precipmean
-display(Plots.heatmap(plon,plat,-log10.(cummprecip[:,:,4]./precipmean),
-xlim=(-125,-115),clim=(-0.7,0.7),color=:bluesreds,alpha=0.75))
+Plots.heatmap(plon,plat,-log10.(cummprecip[:,:,4]./precipmean),
+xlim=(-125,-115),clim=(-0.5,0.5),color=:bluesreds,alpha=0.75)
 Plots.scatter!(ΔDVVdf[crap.>0,:LON],ΔDVVdf[crap.>0,:LAT],zcolor=-log10.(crap[crap.>0]),
 title="Peak2Peak / STD ",color=:bluesreds,markeralpha=1,
-colorbar_title="",legend=false,colorbar=true,aspect_ratio=:equal)
+colorbar_title="",legend=false,colorbar=true)
 savefig("../data/FINAL-FIGURES/dvv_2004.png")
 
 # # plot peak2peak
@@ -436,15 +484,13 @@ for jj in 1:length(arrowfiles)
     )
     append!(ΔDVVdf,df)
 end
-# error in the slope
-crap=ΔDVVdf[:,:SLOPESTD]
-err = ones(size(crap))./crap./100
+
 
 Plots.heatmap(plon,plat,-log10.(precipmean_drought[:,:]./precipmean),
 xlim=(-125,-115),clim=(-0.3,0.3),color=:bluesreds)
 Plots.scatter!(ΔDVVdf[:,:LON],ΔDVVdf[:,:LAT],zcolor=crap=ΔDVVdf[:,:SLOPE],
-title="Slope of dv/v and precipitation deficit",color=:bluesreds,markeralpha=crap,
-colorbar_title="",legend=false,colorbar=true,aspect_ratio=:equal)
+title="Slope of dv/v and precipitation deficit",color=:bluesreds,markeralpha=1,
+colorbar_title="",legend=false,colorbar=true)
 savefig("../data/FINAL-FIGURES/dvv_2012_2016.png")
 
 

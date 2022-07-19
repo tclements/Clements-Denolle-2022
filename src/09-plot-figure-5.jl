@@ -57,6 +57,7 @@ filename = joinpath(@__DIR__,"../data/CSR_GRACE_GRACE-FO_RL06_Mascons_all-correc
 tlwe = Date(2002,1,1) .+ Day.(floor.(ncread(filename,"time")))
 lon = ncread(filename,"lon")
 lat = ncread(filename,"lat")
+lwe = ncread(filename,"lwe_thickness")
 # lwe ./= 100 # convert to m 
 ind2004 = findfirst(tlwe .== Date(2004,10,16))
 ind2005a = findfirst(tlwe .== Date(2005,5,16))
@@ -64,6 +65,7 @@ ind2005b = findfirst(tlwe .== Date(2005,10,16))
 ind2011 = findfirst(tlwe .== Date(2011,9,16))
 ind2016 = findfirst(tlwe .== Date(2016,8,21))
 ind2020 = findfirst(tlwe .== Date(2020,10,16))
+lwe_2012_2016=lwe[:,:,ind2011]-lwe[:,:,ind2016]
 G2004 = gmtread(filename,layer=ind2004,varname="lwe_thickness")
 G2005a = gmtread(filename,layer=ind2005a,varname="lwe_thickness")
 G2005b = gmtread(filename,layer=ind2005b,varname="lwe_thickness")
