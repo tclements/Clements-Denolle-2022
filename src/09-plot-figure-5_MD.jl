@@ -460,6 +460,9 @@ for jj in 1:length(arrowfiles)
     interSTD, slopeSTD = stderror(ols)
     mindate = DVV[ind[1],:DATE]
     maxdate = DVV[ind[end],:DATE]
+    println(maxdate,tDVV[end])
+    println(slope, " for ", tDVV[end], " number of days and ", tDVV[end]/365, " number of years")
+    println("then the yearly rate is ", slope./(tDVV[end]/365), " ")
 
     # Plots.plot(data[:,:X],data[:,:Y])
     # Plots.plot!(data[:,:X],inter.+slope.*data[:,:X])
@@ -472,7 +475,7 @@ for jj in 1:length(arrowfiles)
         MAXDATE=maxdate,
         NOBS=size(data,1),
         INTER=inter,
-        SLOPE=slope,
+        SLOPE=slope/(tDVV[end]/365),
         R2=rtwo,
         INTERSTD=interSTD,
         SLOPESTD=slopeSTD,
@@ -487,10 +490,10 @@ end
 
 
 Plots.heatmap(plon,plat,-log10.(precipmean_drought[:,:]./precipmean),
-xlim=(-125,-115),clim=(-0.3,0.3),color=:bluesreds)
-Plots.scatter!(ΔDVVdf[:,:LON],ΔDVVdf[:,:LAT],zcolor=crap=ΔDVVdf[:,:SLOPE],
-title="Slope of dv/v and precipitation deficit",color=:bluesreds,markeralpha=1,
-colorbar_title="",legend=false,colorbar=true,aspect_ratio=:equal)
+xlim=(-125,-115),clim=(-0.3,0.3),color=:bluesreds,figure)
+Plots.scatter!(ΔDVVdf[:,:LON],ΔDVVdf[:,:LAT],zcolor=crap=ΔDVVdf[:,:SLOPE]*2,
+title="Slope of dv/v and precipitation deficit",color=:bluesreds,markeralpha=1,markesize=28,
+colorbar_title="",legend=false,colorbar=true,aspect_ratio=:equal,size=(800,800))
 savefig("../data/FINAL-FIGURES/dvv_2012_2016.png")
 
 
@@ -588,9 +591,9 @@ minlat = 33#minimum(ΔDVVdf[:,:LAT]) - 0.5
 maxlat = 35#maximum(ΔDVVdf[:,:LAT]) + 0.5
 
 Plots.heatmap(plon,plat,-log10.(precipmean_longterm[:,:]./precipmean),
-xlim=(minlon,maxlon),clim=(-0.1,0.1),ylim=(minlat,maxlat),color=:bluesreds,
+xlim=(minlon,maxlon),clim=(-0.2,0.2),ylim=(minlat,maxlat),color=:bluesreds,
     aspect_ratio=:equal)
-Plots.scatter!(ΔDVVdf[:,:LON],ΔDVVdf[:,:LAT],zcolor=crap=ΔDVVdf[:,:SLOPE]/3,
+Plots.scatter!(ΔDVVdf[:,:LON],ΔDVVdf[:,:LAT],zcolor=crap=ΔDVVdf[:,:SLOPE]/2,
 title="Slope of dv/v and precipitation deficit",color=:bluesreds,markeralpha=1,
 colorbar_title="",legend=false,colorbar=true)
 savefig("../data/FINAL-FIGURES/dvv_2005_2020_LA.png")
