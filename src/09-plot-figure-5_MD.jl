@@ -373,7 +373,7 @@ Plots.heatmap(plon,plat,-log10.(cummprecip[:,:,4]./precipmean),
 xlim=(-125,-115),clim=(-0.5,0.5),color=:bluesreds,alpha=0.75)
 Plots.scatter!(ΔDVVdf[crap.>0,:LON],ΔDVVdf[crap.>0,:LAT],zcolor=-log10.(crap[crap.>0]),
 title="Peak2Peak / STD ",color=:bluesreds,markeralpha=1,
-colorbar_title="",legend=false,colorbar=true)
+colorbar_title="",legend=false,colorbar=true,aspect_ratio=:equal)
 savefig("../data/FINAL-FIGURES/dvv_2004.png")
 
 # # plot peak2peak
@@ -398,7 +398,7 @@ mindays = 3 * 365 # minimum number of days needed for analysis
 for jj in 1:length(arrowfiles)
     # read dv/v for each station 
     DVV = Arrow.Table(arrowfiles[jj]) |> Arrow.columntable |> DataFrame
-    ind = findall(Date(2011,9,1) .<= DVV[:,:DATE] .<= Date(2016,9,1))
+    ind = findall(Date(2011,10,1) .<= DVV[:,:DATE] .<= Date(2016,10,1))
     # only keep stations with > 2 years of data after 2012 
     if length(ind) < mindays
         continue 
@@ -490,7 +490,7 @@ Plots.heatmap(plon,plat,-log10.(precipmean_drought[:,:]./precipmean),
 xlim=(-125,-115),clim=(-0.3,0.3),color=:bluesreds)
 Plots.scatter!(ΔDVVdf[:,:LON],ΔDVVdf[:,:LAT],zcolor=crap=ΔDVVdf[:,:SLOPE],
 title="Slope of dv/v and precipitation deficit",color=:bluesreds,markeralpha=1,
-colorbar_title="",legend=false,colorbar=true)
+colorbar_title="",legend=false,colorbar=true,aspect_ratio=:equal)
 savefig("../data/FINAL-FIGURES/dvv_2012_2016.png")
 
 
