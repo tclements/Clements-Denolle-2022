@@ -1,17 +1,21 @@
-using Arrow 
+using Arrow
 using CSV
 using Dates
-using DataFrames 
+using DataFrames
 using DelimitedFiles
-using DSP 
-using Glob 
-using GLM 
-using GMT
-using Interpolations 
+using DSP
+using GLM
+using Glob
+using Interpolations
+using LaTeXStrings
 using NetCDF
 using Statistics
-using StatsModels 
+using StatsModels
+import GMT  
+import Plots
 
+
+####### Some functions
 function DVVslope(df::DataFrame,ind::AbstractArray)
     t = (df[ind,:DATE] .- df[ind[1],:DATE]) ./ Day(1) .+ 1
 
@@ -25,21 +29,13 @@ function DVVslope(df::DataFrame,ind::AbstractArray)
     interSTD, slopeSTD = stderror(ols)
     return inter, slope, rtwo
 end
-
-"""
-    smooth_withfiltfilt(A::AbstractArray; window_len::Int=7, window::Symbol=:bartlett)
-Apply DSP.filtfilt() to smooth the waveform.
-# Arguments
-- "A::AbstractArray": periodogram of spectrum
-- "window_len::Int=7": window length
-- "window::Symbol=:bartlett": window type: (see https://juliadsp.github.io/DSP.jl/stable/windows/)
-"""
 function smooth_withfiltfilt(A::AbstractArray; window_len::Int=11, window::Symbol=:rect)
     w = getfield(DSP.Windows, window)(window_len)
     A = DSP.filtfilt(w ./ sum(w), A)
     return A
 end
 
+######################### station data ################## 
 #load station locations 
 NCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/NCstations.csv")))
 SCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/CIstations.csv")))
@@ -49,58 +45,69 @@ CAdf = vcat(NCdf, SCdf)
 LAminlon = -119.5
 LAmaxlon = -116.5 
 LAminlat = 32.75 
-LAmaxlat = 34.75 
+LAmaxlat = 35 
 
-# load GRACE data 
-# from http://www2.csr.utexas.edu/grace/RL06_mascons.html
-filename = joinpath(@__DIR__,"../data/CSR_GRACE_GRACE-FO_RL06_Mascons_all-corrections_v02.nc")
-tlwe = Date(2002,1,1) .+ Day.(floor.(ncread(filename,"time")))
-lon = ncread(filename,"lon")
-lat = ncread(filename,"lat")
-lwe = ncread(filename,"lwe_thickness")
-# lwe ./= 100 # convert to m 
-ind2004 = findfirst(tlwe .== Date(2004,10,16))
-ind2005a = findfirst(tlwe .== Date(2005,5,16))
-ind2005b = findfirst(tlwe .== Date(2005,10,16))
-ind2011 = findfirst(tlwe .== Date(2011,9,16))
-ind2016 = findfirst(tlwe .== Date(2016,8,21))
-ind2020 = findfirst(tlwe .== Date(2020,10,16))
-lwe_2012_2016=lwe[:,:,ind2011]-lwe[:,:,ind2016]
-G2004 = gmtread(filename,layer=ind2004,varname="lwe_thickness")
-G2005a = gmtread(filename,layer=ind2005a,varname="lwe_thickness")
-G2005b = gmtread(filename,layer=ind2005b,varname="lwe_thickness")
-G2011 = gmtread(filename,layer=ind2011,varname="lwe_thickness")
-G2016 = gmtread(filename,layer=ind2016,varname="lwe_thickness")
-G2020 = gmtread(filename,layer=ind2020,varname="lwe_thickness")
+# lat/lon for CA
+minlon = -125
+maxlon = -114
+minlat = 32
+maxlat = 42
 
-# load fitted values 
-fitdf = Arrow.Table(joinpath(@__DIR__,"../data/hydro-model-90-day.arrow")) |> Arrow.columntable |> DataFrame
-
-# load temperature values 
-filename = joinpath(@__DIR__,"../data/tmean.nc")
-pptlon = ncread(filename,"lon")
-pptlat = ncread(filename,"lat")
-tmean = ncread(filename,"tmean")
-ttmean = ncread(filename,"t")
-ttmean = Date.(Dates.unix2datetime.(ttmean))
-ttmeanday = (ttmean .- ttmean[1]) ./ Day(1)
-
-# plot maps 2-4 Hz 
+# # plot maps 2-4 Hz 
 freqmin = 2.0
 freqmax = 4.0
 
-# Oct 2004 - May 2005 
-maxgap = 15 # maximum data gap [days]
-mindays = 100 # minimum number of days needed for analysis 
-gray = makecpt(color=150, range=(-10000,10000), no_bg=:true);
-arrowfiles = glob("*",joinpath(@__DIR__,"../data/DVV-90-DAY-COMP/$freqmin-$freqmax/"))
-ΔDVVdf = DataFrame()
 
+######################### play with temperature data ##################
+# load temperature values 
+filename2 = joinpath(@__DIR__,"../data/tmean.nc")
+pptlon = ncread(filename2,"lon")
+pptlat = ncread(filename2,"lat")
+tmean = ncread(filename2,"tmean")
+ttmean = ncread(filename2,"t")
+ttmean = Date.(Dates.unix2datetime.(ttmean))
+ttmeanday = (ttmean .- ttmean[1]) ./ Day(1)
+
+######################### play with precipitation data ##################
+# load precip data 
+filename = joinpath(@__DIR__,"../data/ppt.nc")
+plon = ncread(filename,"lon")
+plat = ncread(filename,"lat")
+tppt = ncread(filename,"t")
+tppt = Date.(Dates.unix2datetime.(tppt))
+ppt = ncread(filename,"ppt")
+ppt[ppt .== -9999.0] .= 0 
+tpptday = (tppt .- tppt[1]) ./ Day(1)
+
+
+# wateryear precipitation 
+years = 1986:2020
+cummprecip=zeros(size(ppt[:,:,eachindex(years)]))
+for year in years
+    ind = findall(Date(year - 1,10,1) .<= tppt.< Date(year,10,1))
+    cummprecip[:,:,year-first(years) + 1] .= sum(ppt[:,:,ind], dims=3)
+end
+
+# average water year precipitation
+precipmean = dropdims(mean(cummprecip, dims=3), dims=3)
+
+# mean 2012-2016 data 
+precipmean_drought = dropdims(mean(cummprecip[:,:, 2012 .<= years .<= 2016], dims=3), dims=3)
+########################## seismic dv/v stuff #############
+
+# load fitted values dvv 
+fitdf = Arrow.Table(joinpath(@__DIR__,"../data/hydro-model-90-day.arrow")) |> Arrow.columntable |> DataFrame
+arrowfiles = glob("*",joinpath(@__DIR__,"../data/DVV-90-DAY-COMP/$freqmin-$freqmax/"))
+
+########################## Oct 2004 - May 2005  #################
+maxgap = 50 # maximum data gap [days]
+mindays = 300 # minimum number of days needed for analysis 
+ΔDVVdf = DataFrame()
 for jj in 1:length(arrowfiles)
     # read dv/v for each station 
     DVV = Arrow.Table(arrowfiles[jj]) |> Arrow.columntable |> DataFrame
-    ind = findall(Date(2004,10,1) .< DVV[:,:DATE] .< Date(2005,5,1))
-    # only keep stations with > 2 years of data after 2012 
+    ind = findall(Date(2004,10,1) .<= DVV[:,:DATE] .< Date(2005,10,1))
+    # remove station without data
     if length(ind) < mindays
         continue 
     end
@@ -122,7 +129,7 @@ for jj in 1:length(arrowfiles)
     stalat = CAdf[staind,:Latitude]
     stalon = CAdf[staind,:Longitude]
 
-    println("Calculating Δdv/v $netsta $(now())")
+    println("\nCalculating Δdv/v $netsta $jj")
 
     # remove temperature effects
     fitind = findfirst(fitdf[:,:NETSTA] .== netsta)
@@ -130,18 +137,31 @@ for jj in 1:length(arrowfiles)
     latind = argmin(abs.(pptlat .- fitdf[fitind,:LAT]))
     temp = tmean[latind,lonind,:]
     temp .-= mean(temp)
+    if sum(abs.(temp))<1
+        continue
+    end
     tempfilt = smooth_withfiltfilt(temp,window_len=45)
     tempind = findall(DVV[1,:DATE] .<= ttmean .<= DVV[end,:DATE])
-    # ttemp = ttmean[tempind]
 
     # filter temperature data 
-    dvvT = tempfilt[tempind .- round(Int,fitdf[jj,:E5])] 
+    dvvT = tempfilt[tempind .- round(Int,fitdf[jj,:D5])] 
     dvvT .-= mean(dvvT)
     dvvT ./= std(dvvT)
-    dvvT .*= fitdf[fitind,:E4]
+    dvvT .*= fitdf[fitind,:D4]
+
+    # get precip data at that station
+        # get precip nearest station lat, lon 
+    staind = findfirst(CAdf[!,:Station] .== sta)
+    if isnothing(staind)
+        continue
+    end
+    lonind = argmin(abs.(plon .- stalon))
+    latind = argmin(abs.(plat .- stalat))
+    precip =  cummprecip[latind,lonind,findall(years .== 2005)]./precipmean[latind,lonind]
 
     # remove temperature from dv/v 
     dvvtempind = findall(in(ttmean[tempind]),DVV[ind,:DATE])
+    dvvptind = findall(in(tppt),DVV[ind,:DATE])
     DVV[ind,:DVV] .-= dvvT[dvvtempind]  
 
     # create linear model 
@@ -154,6 +174,8 @@ for jj in 1:length(arrowfiles)
     interSTD, slopeSTD = stderror(ols)
     mindate = DVV[ind[1],:DATE]
     maxdate = DVV[ind[end],:DATE]
+    correction = (maxdate - mindate) / Day(1) / 364
+    slope /= correction 
 
     # create dataframe
     df = DataFrame(
@@ -170,58 +192,63 @@ for jj in 1:length(arrowfiles)
         STA=sta,
         LON=stalon,
         LAT=stalat,
+        cumprecip=precip
     )
     append!(ΔDVVdf,df)
 end
 
-# plot with GMT 
-minlon = minimum(ΔDVVdf[:,:LON]) - 0.5
-maxlon = maximum(ΔDVVdf[:,:LON]) + 0.5
-minlat = minimum(ΔDVVdf[:,:LAT]) - 0.5
-maxlat = maximum(ΔDVVdf[:,:LAT]) + 0.5
 
-# plot Δdv/v 
+# plot sensitivity of dv/v to preciptation
 colorlimit=1.0
-CDVV = GMT.makecpt(T=(-colorlimit,colorlimit,colorlimit / 101), cmap=:vik, reverse=true);
-CGRACE = GMT.makecpt(T=(-30,30,30 / 101), cmap=:vik);
+CDVV = GMT.makecpt(T=(-colorlimit,colorlimit,colorlimit / 101), cmap=:vik);
+preciplimit = 250 
+CPRECIP = GMT.makecpt(T=(-preciplimit,preciplimit, preciplimit / 101), cmap=:vik);
+land = GMT.makecpt(color=:terra, range=(-5000,5000), no_bg=:true);
+precip_2005 = GMT.mat2grid(
+    (cummprecip[:,:, findall(years .== 2005)] .- precipmean) ./ precipmean .* 100,
+    x = plon, 
+    y = plat, 
+)
+
+
 GMT.grdimage(
     "@earth_relief_15s",
-    cmap=gray, 
+    cmap=:gray, 
     J=:guess,
     shade=true,
     region=(minlon,maxlon,minlat,maxlat),
     coast=true,
     colorbar=false,
-    )
+)
+GMT.grdimage!(
+    -precip_2005,
+    cmap=CPRECIP,
+    alpha=50,
+    colorbar=false,
+)
 GMT.coast!(
     N="a",
     ocean=:white,
 )
-GMT.grdimage!(
-    -(G2005a .- G2004),
-    cmap=CGRACE,
-    alpha=50,
-    colorbar=false,
-)
 GMT.scatter!(
     ΔDVVdf[:,:LON],
     ΔDVVdf[:,:LAT],
-    zcolor=-ΔDVVdf[:,:SLOPE],
+    zcolor=ΔDVVdf[:,:SLOPE],
     markeredgecolor=:black,
     marker=:c,
     transparency= 15,
-    # colorbar=true,
+    colorbar=false,
     cmap=CDVV,
-    markersize="6p",
+    markersize="5p",
 )
 GMT.colorbar!(
     C=CDVV,
     frame=(annot=:auto, ticks=:auto, xlabel="dv/v [%]"),
-    pos=(anchor=:BL,horizontal=true,offset=(-5.5,-2),length=5),
+    pos=(anchor=:BL,horizontal=true,offset=(-5.5,-2),length=-5),
 )
 GMT.colorbar!(
-    C=CGRACE,
-    frame=(annot=:auto, ticks=:auto, xlabel="LWE [cm]"), 
+    C=CPRECIP,
+    frame=(annot=:auto, ticks=:auto, xlabel="@~D@~ Precipitation [%]"), 
     pos=(anchor=:BL, horizontal=true,offset=(-5.5,-2),move_annot=true,length=5), 
     W=-1,
 )
@@ -233,34 +260,47 @@ GMT.plot!(
     ls=:dashed
 )
 GMT.plot!(
-    [LAminlon LAmaxlat; -119.45 39.01],
+    [LAminlon LAmaxlat; -119.04 38.98],
     region=(minlon,maxlon,minlat,maxlat), 
     lw=1,
     ls=:dashed,
     alpha=15,
 )
 GMT.plot!(
-    [LAmaxlon LAmaxlat; -114.2 38.98],
+    [LAmaxlon LAmaxlat; -114.8 38.8],
     region=(minlon,maxlon,minlat,maxlat), 
     lw=1,
     ls=:dashed, 
     alpha=15,
 )
 # inset map 
-tt = mapproject(region=(LAminlon,LAmaxlon,LAminlat,LAmaxlat), proj=:merc, figsize=6, map_size=true);
+tt = GMT.mapproject(
+    region=(LAminlon,LAmaxlon,LAminlat,LAmaxlat), 
+    proj=:merc, 
+    figsize=5, 
+    map_size=true,
+);
 mapW = tt.data[1]
 mapH = tt.data[2]
-GMT.basemap!(inset=(size=(mapW, mapH), anchor=:TR, width=1, offset=(-6.75, -10.25), save="xx000"))
+GMT.basemap!(
+    inset=(size=(mapW, mapH), 
+    anchor=:TR, 
+    width=1, 
+    offset=(-7.5, -10.25), 
+    save="xx000"),
+)
 t = readdlm("xx000")
 GMT.grdimage!(
-    "@srtm_relief_03s",
-    cmap=gray, 
+    "@earth_relief_15s",
+    cmap=land, 
     J=:merc,
     shade=true,
     region=(LAminlon,LAmaxlon,LAminlat,LAmaxlat),
-    coast=false,
+    coast=:white,
     colorbar=false,
-    xshift=t[1], yshift=t[2],
+    shore=:true,
+    xshift=t[1], 
+    yshift=t[2],
 )
 GMT.coast!(
     shore=true, 
@@ -270,7 +310,7 @@ GMT.coast!(
 GMT.scatter!(
     ΔDVVdf[:,:LON],
     ΔDVVdf[:,:LAT],
-    zcolor=-ΔDVVdf[:,:SLOPE],
+    zcolor=ΔDVVdf[:,:SLOPE],
     markeredgecolor=:black,
     marker=:c,
     transparency= 15,
@@ -281,22 +321,18 @@ GMT.scatter!(
     savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/DVV-2004-2005-$freqmin-$freqmax.png"),
 )
 
-# 2012 - 2016 
+######################################### 2011 - 2016 ###########################
 maxgap = 180 # maximum data gap [days]
 mindays = 3 * 365 # minimum number of days needed for analysis 
-arrowfiles = glob("*",joinpath(@__DIR__,"../data/DVV-90-DAY-COMP/$freqmin-$freqmax/"))
 ΔDVVdf = DataFrame()
-
 for jj in 1:length(arrowfiles)
     # read dv/v for each station 
     DVV = Arrow.Table(arrowfiles[jj]) |> Arrow.columntable |> DataFrame
-    ind = findall(Date(2011,9,1) .<= DVV[:,:DATE] .<= Date(2016,9,1))
+    ind = findall(Date(2011,10,1) .<= DVV[:,:DATE] .< Date(2016,10,1))
     # only keep stations with > 2 years of data after 2012 
     if length(ind) < mindays
         continue 
     end
-
-    # make sure observations start and end in October 
 
     # check for gaps in the data 
     tDVV = (DVV[ind,:DATE] .- DVV[ind[1],:DATE]) ./ Day(1) .+ 1
@@ -322,6 +358,9 @@ for jj in 1:length(arrowfiles)
     lonind = argmin(abs.(pptlon .- fitdf[fitind,:LON]))
     latind = argmin(abs.(pptlat .- fitdf[fitind,:LAT]))
     temp = tmean[latind,lonind,:]
+    if maximum(temp)<1
+        continue
+    end
     temp .-= mean(temp)
     tempfilt = smooth_withfiltfilt(temp,window_len=45)
     tempind = findall(DVV[1,:DATE] .<= ttmean .<= DVV[end,:DATE])
@@ -340,13 +379,16 @@ for jj in 1:length(arrowfiles)
     # create linear model 
     data = DataFrame(X=tDVV ./ tDVV[end],Y=DVV[ind,:DVV])
     ols = lm(@formula(Y ~ X), data, wts=DVV[ind,:CC] .^ 3)
-
-    # get relevant data 
     inter, slope = coef(ols)
     rtwo = r2(ols)
     interSTD, slopeSTD = stderror(ols)
     mindate = DVV[ind[1],:DATE]
     maxdate = DVV[ind[end],:DATE]
+
+    # correct for data coverage / annualized data 
+    correction = (maxdate - mindate) / Day(1) / 1826
+    slope /= correction 
+    slope /= 5 
 
     # create dataframe
     df = DataFrame(
@@ -354,7 +396,7 @@ for jj in 1:length(arrowfiles)
         MAXDATE=maxdate,
         NOBS=size(data,1),
         INTER=inter,
-        SLOPE=slope,
+        SLOPE= slope,
         R2=rtwo,
         INTERSTD=interSTD,
         SLOPESTD=slopeSTD,
@@ -367,54 +409,56 @@ for jj in 1:length(arrowfiles)
     append!(ΔDVVdf,df)
 end
 
-# plot with GMT 
-minlon = minimum(ΔDVVdf[:,:LON]) - 0.5
-maxlon = maximum(ΔDVVdf[:,:LON]) + 0.5
-minlat = minimum(ΔDVVdf[:,:LAT]) - 0.5
-maxlat = maximum(ΔDVVdf[:,:LAT]) + 0.5
+# plot topography + precipitation 
+colorlimit=0.15
+CDVV = GMT.makecpt(T=(-colorlimit,colorlimit,colorlimit / 101), cmap=:vik);
+preciplimit = 50 
+CPRECIP = GMT.makecpt(T=(-preciplimit,preciplimit,preciplimit / 101), cmap=:vik);
+precip_2012_2016 = GMT.mat2grid(
+    (precipmean_drought .- precipmean) ./ precipmean .* 100,
+    x = plon, 
+    y = plat, 
+)
 
-# plot Δdv/v 
-colorlimit=0.3
-CDVV = GMT.makecpt(T=(-colorlimit,colorlimit,colorlimit / 101), cmap=:vik, reverse=true);
-CGRACE = GMT.makecpt(T=(-15,15,15 / 101), cmap=:vik);
+
 GMT.grdimage(
     "@earth_relief_15s",
-    cmap=gray, 
+    cmap=:gray, 
     J=:guess,
     shade=true,
     region=(minlon,maxlon,minlat,maxlat),
     coast=true,
     colorbar=false,
-    )
+)
+GMT.grdimage!(
+    -precip_2012_2016,
+    cmap=CPRECIP,
+    alpha=50,
+    colorbar=false,
+)
 GMT.coast!(
     N="a",
     ocean=:white,
 )
-GMT.grdimage!(
-    -(G2016 .- G2011),
-    cmap=CGRACE,
-    alpha=50,
-    colorbar=false,
-)
 GMT.scatter!(
     ΔDVVdf[:,:LON],
     ΔDVVdf[:,:LAT],
-    zcolor=-ΔDVVdf[:,:SLOPE],
+    zcolor=ΔDVVdf[:,:SLOPE],
     markeredgecolor=:black,
     marker=:c,
     transparency= 15,
-    # colorbar=true,
+    colorbar=false,
     cmap=CDVV,
-    markersize="6p",
+    markersize="5p",
 )
 GMT.colorbar!(
     C=CDVV,
     frame=(annot=:auto, ticks=:auto, xlabel="dv/v [%]"),
-    pos=(anchor=:BL,horizontal=true,offset=(-5.5,-2),length=5),
+    pos=(anchor=:BL,horizontal=true,offset=(-5.5,-2),length=-5),
 )
 GMT.colorbar!(
-    C=CGRACE,
-    frame=(annot=:auto, ticks=:auto, xlabel="LWE [cm]"), 
+    C=CPRECIP,
+    frame=(annot=:auto, ticks=:auto, xlabel="@~D@~ Precipitation [%]"), 
     pos=(anchor=:BL, horizontal=true,offset=(-5.5,-2),move_annot=true,length=5), 
     W=-1,
 )
@@ -426,33 +470,47 @@ GMT.plot!(
     ls=:dashed
 )
 GMT.plot!(
-    [LAminlon LAmaxlat; -119.65 38.9],
+    [LAminlon LAmaxlat; -119.04 38.98],
     region=(minlon,maxlon,minlat,maxlat), 
     lw=1,
     ls=:dashed,
     alpha=15,
 )
 GMT.plot!(
-    [LAmaxlon LAmaxlat; -114.55 38.9],
+    [LAmaxlon LAmaxlat; -114.8 38.8],
     region=(minlon,maxlon,minlat,maxlat), 
     lw=1,
     ls=:dashed, 
     alpha=15,
 )
 # inset map 
-tt = mapproject(region=(LAminlon,LAmaxlon,LAminlat,LAmaxlat), proj=:merc, figsize=6, map_size=true);
-mapW = tt[1].data[1];   mapH = tt[1].data[2]
-GMT.basemap!(inset=(size=(mapW, mapH), anchor=:TR, width=1, offset=(-6.75, -10.25), save="xx000"))
+tt = GMT.mapproject(
+    region=(LAminlon,LAmaxlon,LAminlat,LAmaxlat), 
+    proj=:merc, 
+    figsize=5, 
+    map_size=true,
+);
+mapW = tt.data[1]
+mapH = tt.data[2]
+GMT.basemap!(
+    inset=(size=(mapW, mapH), 
+    anchor=:TR, 
+    width=1, 
+    offset=(-7.5, -10.25), 
+    save="xx000"),
+)
 t = readdlm("xx000")
 GMT.grdimage!(
-    "@srtm_relief_03s",
-    cmap=gray, 
+    "@earth_relief_15s",
+    cmap=land, 
     J=:merc,
     shade=true,
     region=(LAminlon,LAmaxlon,LAminlat,LAmaxlat),
-    coast=false,
+    coast=:white,
     colorbar=false,
-    xshift=t[1], yshift=t[2],
+    shore=:true,
+    xshift=t[1], 
+    yshift=t[2],
 )
 GMT.coast!(
     shore=true, 
@@ -462,7 +520,7 @@ GMT.coast!(
 GMT.scatter!(
     ΔDVVdf[:,:LON],
     ΔDVVdf[:,:LAT],
-    zcolor=-ΔDVVdf[:,:SLOPE],
+    zcolor=ΔDVVdf[:,:SLOPE],
     markeredgecolor=:black,
     marker=:c,
     transparency= 15,
@@ -473,14 +531,12 @@ GMT.scatter!(
     savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/DVV-2011-2016-$freqmin-$freqmax.png"),
 )
 
+############################ LA Area  # 2005 - 2020 ###################################
 
-# 2005 - 2020
 maxgap = 2*365 # maximum data gap [days]
 mindays = 13 * 365 # minimum number of days needed for analysis 
-
-arrowfiles = glob("*",joinpath(@__DIR__,"../data/DVV-90-DAY-COMP/$freqmin-$freqmax/"))
+# arrowfiles = glob("*",joinpath(@__DIR__,"../data/DVV-90-DAY-COMP/$freqmin-$freqmax/"))
 ΔDVVdf = DataFrame()
-
 for jj in 1:length(arrowfiles)
     # read dv/v for each station 
     DVV = Arrow.Table(arrowfiles[jj]) |> Arrow.columntable |> DataFrame
@@ -559,58 +615,6 @@ for jj in 1:length(arrowfiles)
     append!(ΔDVVdf,df)
 end
 
-# plot with GMT 
-minlon = minimum(ΔDVVdf[:,:LON]) - 0.5
-maxlon = maximum(ΔDVVdf[:,:LON]) + 0.5
-minlat = minimum(ΔDVVdf[:,:LAT]) - 0.5
-maxlat = maximum(ΔDVVdf[:,:LAT]) + 0.5
-
-# plot Δdv/v 
-colorlimit=0.3
-CDVV = GMT.makecpt(T=(-colorlimit,colorlimit,colorlimit / 101), cmap=:vik, reverse=true);
-CGRACE = GMT.makecpt(T=(-10,10,10 / 101), cmap=:vik);
-GMT.grdimage(
-    "@earth_relief_15s",
-    cmap=:gray, 
-    J=:guess,
-    shade=true,
-    region=(minlon,maxlon,minlat,maxlat),
-    coast=true,
-    colorbar=false,
-)
-GMT.grdimage!(
-    -(G2020 .- G2005b),
-    cmap=CGRACE,
-    alpha=50,
-    colorbar=false,
-)
-GMT.coast!(
-    N="a",
-    ocean=:white,
-)
-GMT.scatter!(
-    ΔDVVdf[:,:LON],
-    ΔDVVdf[:,:LAT],
-    zcolor=-ΔDVVdf[:,:SLOPE],
-    markeredgecolor=:black,
-    marker=:c,
-    transparency= 15,
-    colorbar=false,
-    cmap=CDVV,
-)
-GMT.colorbar!(
-    C=CDVV,
-    frame=(annot=:auto, ticks=:auto, xlabel="dv/v [%]"),
-    pos=(anchor=:BL,horizontal=true,offset=(-5.5,-2),length=5),
-)
-GMT.colorbar!(
-    C=CGRACE,
-    frame=(annot=:auto, ticks=:auto, xlabel="LWE [cm]"), 
-    pos=(anchor=:BL, horizontal=true,offset=(-5.5,-2),move_annot=true,length=5), 
-    W=-1,
-    show=1,
-    savefig=joinpath(@__DIR__,"../data/FINAL-FIGURES/DVV-2005-2020-$freqmin-$freqmax.png"),
-)
 
 # Ridgecrest 
 maxgap = 10 # maximum data gap [days]
