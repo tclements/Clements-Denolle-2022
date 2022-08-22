@@ -1,7 +1,7 @@
 using Arrow ,CSV,  Dates, NetCDF
 using DataFrames ,DelimitedFiles, Glob
 using DSP , GLM, Interpolations, Statistics, StatsModels
-using Plots
+using Plots, SpecialFunctions
 using SeisNoise
 
 ####### Some functions
@@ -24,6 +24,20 @@ function smooth_withfiltfilt(A::AbstractArray; window_len::Int=11, window::Symbo
     return A
 end
 
+
+function drained(precip,c,r,δt)
+    erfcij = erfc.(r ./ sqrt.(4. .* c .* Float64.(0:length(precip)) .* δt ))
+    P = conv(erfcij,precip .- mean(precip))[1:end÷2]
+    return P
+end
+
+# constants for models 
+r = 500.
+δt = 86400.
+α = (1 + 0.27) / 3 / (1 - 0.27)
+ϕ = 0.15   # porosity 
+
+
 ###################### LWE ##############################
 # from http://www2.csr.utexas.edu/grace/RL06_mascons.html
 filename = joinpath(@__DIR__,"../data/CSR_GRACE_GRACE-FO_RL06_Mascons_all-corrections_v02.nc")
@@ -42,8 +56,8 @@ lwe_2012_2016=lwe[:,:,ind2011]-lwe[:,:,ind2016]
 
 ######################### station data ################## 
 #load station locations 
-NCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/NCstations.csv")))
-SCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../data/CIstations.csv")))
+NCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../../data/NCstations.csv")))
+SCdf = DataFrame(CSV.File(joinpath(@__DIR__,"../../data/CIstations.csv")))
 CAdf = vcat(NCdf, SCdf)
 
 # lat/lon for LA map 
@@ -59,7 +73,7 @@ freqmax = 4.0
 
 ######################### play with temperature data ##################
 # load temperature values 
-filename2 = joinpath(@__DIR__,"../data/tmean.nc")
+filename2 = joinpath(@__DIR__,"../../data/tmean.nc")
 pptlon = ncread(filename2,"lon")
 pptlat = ncread(filename2,"lat")
 tmean = ncread(filename2,"tmean")
@@ -76,11 +90,11 @@ for i in 1:length(tmean[:,1,1])
         tempmean[i,j]=std(crap.-mean(crap))
     end
 end
-Plots.heatmap(pptlon,pptlat,tempmean,xlim=(-125,-115),clim=(0,2))
+# Plots.heatmap(pptlon,pptlat,tempmean,xlim=(-125,-115),clim=(0,2))
 
 ######################### play with precipitation data ##################
 # load precip data 
-filename = joinpath(@__DIR__,"../data/ppt.nc")
+filename = joinpath(@__DIR__,"../../data/ppt.nc")
 plon = ncread(filename,"lon")
 plat = ncread(filename,"lat")
 tppt = ncread(filename,"t")
@@ -167,12 +181,6 @@ end
 # 37 2021
 # 38 2022
 
-
-
-
-
-
-
 tempvsprecip=zeros(size(tempmean))
 for i in 1:length(tempmean[:,1])
     for j in 1:length(tempmean[1,:])
@@ -189,17 +197,19 @@ Plots.heatmap(pptlon,pptlat,log10.(tempvsprecip),xlim=(-125,-115))
 ########################## seismic dv/v stuff #############
 
 # load fitted values dvv 
-fitdf = Arrow.Table(joinpath(@__DIR__,"../data/hydro-model-90-day.arrow")) |> Arrow.columntable |> DataFrame
-arrowfiles = glob("*",joinpath(@__DIR__,"../data/DVV-90-DAY-COMP/$freqmin-$freqmax/"))
+fitdf = Arrow.Table(joinpath(@__DIR__,"../../data/hydro-model-90-day.arrow")) |> Arrow.columntable |> DataFrame
+arrowfiles = glob("*",joinpath(@__DIR__,"../../data/DVV-90-DAY-COMP/$freqmin-$freqmax/"))
 
 
-################# overall analysis ##############
-# plot variability in dv/v
+################# overall analysis of noise - unexplained dv/v ##############
+# plot variability in dv/v that is not explained by temp or hydro.
 maxgap=20
 dvvstd =Array{Float64}(undef, length(arrowfiles))
 slat =Array{Float64}(undef, length(arrowfiles))
 slon =Array{Float64}(undef, length(arrowfiles))
 for jj in 1:length(arrowfiles)
+    println(jj)
+    try:
     # read dv/v for each station 
     DVV = Arrow.Table(arrowfiles[jj]) |> Arrow.columntable |> DataFrame
     
@@ -208,11 +218,64 @@ for jj in 1:length(arrowfiles)
     if length(tDVV)<2
         continue
     end
-    # if maximum(diff(tDVV)) > maxgap
-    #     continue 
-    # end
+    # get station name and location 
+    netsta = replace(basename(arrowfiles[jj]),".arrow"=>"")
+    net, sta = split(netsta,".")
 
-    data = DataFrame(X=tDVV ./ tDVV[end],Y=DVV[:,:DVV])
+    println(" $netsta")
+    staind = findfirst(CAdf[!,:Station] .== sta)
+    if isnothing(staind)
+        println("No lat/lon for $netsta")
+        continue 
+    end
+    slat[jj] = CAdf[staind,:Latitude]
+    slon[jj] = CAdf[staind,:Longitude]
+
+    # remove temperature effects
+    fitind = findfirst(fitdf[:,:NETSTA] .== netsta)
+    if typeof(fitind)==Nothing
+        continue
+    end
+
+    lonind = argmin(abs.(pptlon .- fitdf[fitind,:LON]))
+    latind = argmin(abs.(pptlat .- fitdf[fitind,:LAT]))
+    temp = tmean[latind,lonind,:]
+    temp .-= mean(temp)
+    if sum(abs.(temp))<1
+        continue
+    end
+    tempfilt = smooth_withfiltfilt(temp,window_len=45)
+    tempind = findall(DVV[1,:DATE] .<= ttmean .<= DVV[end,:DATE])
+    # filter temperature data 
+    dvvT = tempfilt[tempind .- round(Int,fitdf[jj,:D5])] 
+    dvvT .-= mean(dvvT)
+    dvvT ./= std(dvvT)
+    dvvT .*= fitdf[fitind,:D4]
+    dvvtempind = findall(in(ttmean[tempind]),DVV[:,:DATE])
+    dvvptind = findall(in(tppt),DVV[:,:DATE])
+    # DVV[:,:DVV] .-= dvvT[dvvtempind]  
+
+    # remove the hydro model
+
+    tminind = findfirst(tppt .== DVV[1,:DATE])
+    tmaxind = findlast(tppt .== DVV[end, :DATE])
+    dvvpind = findall(in(tppt[tminind:tmaxind]),DVV[:,:DATE])
+    latind = argmin(abs.(plat .- slat[jj]))
+    lonind = argmin(abs.(plon .- slon[jj]))
+    precip = ppt[latind,lonind,:]
+    D = drained(precip[tminind:tmaxind],fitdf[fitind,:D3],r,δt)
+    D .-= mean(D)
+    D ./= std(D)
+    ypredDrained = fitdf[fitind,:D1] .+ fitdf[fitind,:D2].* D #.+ fitdf[fitind,:D4] .* smoothtemp[tempind .- round(Int,:D4)]
+
+    # println(length(DVV[:,:DVV] ))
+    # println(length(ypredDrained[dvvpind]))
+    # println(length(dvvT[dvvtempind]))
+    DVV[:,:DVV] .-=ypredDrained[dvvpind]+dvvT[dvvtempind]  
+
+    # get the residual STD
+
+    data = DataFrame(X=tDVV[1:end] ./ tDVV[end],Y=DVV[:,:DVV])
     ols = lm(@formula(Y ~ X), data, wts=DVV[:,:CC] .^ 3)
     # get relevant data 
     inter, slope = coef(ols)
@@ -221,20 +284,14 @@ for jj in 1:length(arrowfiles)
 
     dvvstd[jj] = std(  data[:,:Y] - (inter.+slope.*data[:,:X])   )
 
-    # get station name and location 
-    netsta = replace(basename(arrowfiles[jj]),".arrow"=>"")
-    net, sta = split(netsta,".")
-    staind = findfirst(CAdf[!,:Station] .== sta)
-    if isnothing(staind)
-        println("No lat/lon for $netsta")
-        continue 
-    end
-    slat[jj] = CAdf[staind,:Latitude]
-    slon[jj] = CAdf[staind,:Longitude]
+    except:
+    pass
+
+
 end
 Plots.scatter(slon,slat,zcolor=dvvstd,title="STD(dv/v)",color=:bilbao,markeralpha=1,
 colorbar_title="",legend=false,colorbar=true,clim=(0,0.5), xlim=(-125,-115),ylim=(32,42))
-savefig("../data/FINAL-FIGURES/scatter_dvvstd.png")
+savefig("../data/FINAL-FIGURES/scatter_unexplained_std.png")
 
 
 
@@ -244,6 +301,7 @@ mindays = 100 # minimum number of days needed for analysis
 # gray = makecpt(color=150, range=(-10000,10000), no_bg=:true);
 ΔDVVdf = DataFrame()
 for jj in 1:length(arrowfiles)
+    println()
     # read dv/v for each station 
     DVV = Arrow.Table(arrowfiles[jj]) |> Arrow.columntable |> DataFrame
     ind = findall(Date(2004,10,1) .< DVV[:,:DATE] .< Date(2005,5,1))
@@ -253,7 +311,9 @@ for jj in 1:length(arrowfiles)
     end
 
     # check for gaps in the data 
-    tDVV = (DVV[ind,:DATE] .- DVV[ind[1],:DATE]) ./ Day(1) .+ 1
+    tDVV = (DVV[ind,:DATE] .- DVV[ind[1],:DATE
+    
+    ]) ./ Day(1) .+ 1
     if maximum(diff(tDVV)) > maxgap
         continue 
     end
