@@ -74,13 +74,16 @@ function healing_s(t::AbstractArray,tmin1::Float64,tmax1::Float64)
     end
     return c
 end
+# healing without tmin
+function healing_s1(t::AbstractArray,tmax1::Float64)
+    c=zeros( length(t))
+    for x = 1:length(t)
+        fexp(tau)= exp(-t[x]/tau)./tau
+        c[x],e=QuadGK.quadgk(fexp, 0.1, tmax1;maxevals=10_000) # here tau varies
+    end
+    return c
+end
 
-function modelhealingWES(p::AbstractArray)
-    ypred = p[1].*healing_s(tyear_wes,p[2],p[3])#.+p[3]
-    crap=sum(abs.(ypred .- ( WES[ind_postquake,:DVV]
-    -WES[ind_postquake,:DRAINDED].-yb_wes)).^2 )
-    return  crap
-end   
 
 
 function modelhealingHEC(p::AbstractArray)
@@ -91,12 +94,6 @@ function modelhealingHEC(p::AbstractArray)
 end    
 
 
-function modelhealingJRC(p::AbstractArray)
-    ypred = p[1].*healing_s(tyear_jrc,p[2],p[3])#.+p[3]
-    crap=   sum(abs.(ypred .- ( JRC2[ind_postquake_ridge,:DVV]
-    -JRC2[ind_postquake_ridge,:DRAINDED].-yb_jrc)).^2 )
-        return crap
-end    
 # fit log-log model 
 # solve for log model 
 reslog = optimize(
@@ -123,42 +120,126 @@ pexp = Optim.minimizer(resexp)
 e = pexp[1] .* (1.0 .- exp.(-dtpred ./ pexp[2]))
 
 # optimize Snieder's model
+
+
+#############################################
 # El Cucapah Mayor
+
+function modelhealingWES(p::AbstractArray)
+    ypred = p[1].*healing_s(tyear_wes,p[2],p[3])#.+p[3]
+    crap=sum(abs.(ypred .- ( WES[ind_postquake,:DVV]
+    -WES[ind_postquake,:DRAINDED].-yb_wes)).^2 )
+    return  crap
+end   
+
+function modelhealingWES1(p::AbstractArray)
+    ypred = p[1].*healing_s1(tyear_wes,p[2])#.+p[3]
+    crap=sum(abs.(ypred .- ( WES[ind_postquake,:DVV]
+    -WES[ind_postquake,:DRAINDED].-yb_wes)).^2 )
+    return  crap
+end   
+reshealing1 = optimize(
+        modelhealingWES1, 
+        [-3.,0.,0.1], # lower
+        [0.,10.,30.], # upper
+        [-1.5,0.1,7.], # initial values
+        Fminbox(LBFGS()),
+        Optim.Options(time_limit=120.0))
 reshealing = optimize(
         modelhealingWES, 
         [-3.,0.,0.1], # lower
         [0.,10.,30.], # upper
         [-1.5,0.1,7.], # initial values
         Fminbox(LBFGS()),
-        Optim.Options(time_limit=60.0))
+        Optim.Options(time_limit=120.0))
+p1 = Optim.minimizer(reshealing1)
 p = Optim.minimizer(reshealing)
+residual_wes1=minimum(reshealing1)
+residual_wes=minimum(reshealing)
 ypredWES =  p[1].*healing_s(tyear_wes,p[2],p[3])#.+p[3]  
+ypredWES1 =  p1[1].*healing_s(tyear_wes,p1[2])#.+p[3] 
 println("Fit for El Cucapah Mayor returns "*string(p[2])*" "*string(p[3])*" years")
 # 13.8 years     
-plot(WES[ind_postquake,:DATE],WES[ind_postquake,:DVV]
--WES[ind_postquake,:DRAINDED].-yb_wes)
+plot(WES[:,:DATE],WES[:,:DVV]-WES[:,:DRAINDED].-yb_wes)
 plot!(WES[ind_postquake,:DATE],ypredWES)
+plot!(WES[ind_postquake,:DATE],ypredWES1)
 tmin_wes=p[2]
 tmax_wes=p[3]
+BIC_wes1 = 2 * log(length(ind_postquake))-2*log(residual_wes1)
+BIC_wes = 3 * log(length(ind_postquake))-2*log(residual_wes)
+println("Difference in BIC from adding tmin = ", string(BIC_wes-BIC_wes1))
+
+###########################################################
 # Hectore Mine
+
+# fit without tmin
+function modelhealingHEC1(p::AbstractArray)
+    ypred = p[1].*healing_s1(tyear_hec,p[2])#.+p[3]
+    crap=sum(abs.(ypred .- (HEC[ind_postquake_hectore,:DVV]
+    -HEC[ind_postquake_hectore,:DRAINDED].-yb_hec)).^2 )
+    return  crap
+end    
+# fit with tmin
+function modelhealingHEC(p::AbstractArray)
+    ypred = p[1].*healing_s(tyear_hec,p[2],p[3])#.+p[3]
+    crap=sum(abs.(ypred .- (HEC[ind_postquake_hectore,:DVV]
+    -HEC[ind_postquake_hectore,:DRAINDED].-yb_hec)).^2 )
+    return  crap
+end    
+
+reshealing1 = optimize(
+        modelhealingHEC1, 
+        [-3.,0.1],
+        [0.,30.],
+        [-1.5,7. ],
+        Fminbox(LBFGS()),
+        Optim.Options(time_limit=160.0))
 reshealing = optimize(
         modelhealingHEC, 
         [-3.,0.,0.1],
         [0.,10.,30.],
         [-1.5,3.,7. ],
         Fminbox(LBFGS()),
-        Optim.Options(time_limit=60.0))
+        Optim.Options(time_limit=160.0))
+p1 = Optim.minimizer(reshealing1)
 p = Optim.minimizer(reshealing)
+residual_hec1=minimum(reshealing1)
+residual_hec=minimum(reshealing)
+
 ypredHEC =  p[1].*healing_s(tyear_hec,p[2],p[3]) #.+p[3]
+ypredHEC1 =  p1[1].*healing_s1(tyear_hec,p1[2]) #.+p[3]
 println("Fit for Hector Mine returns "*string(p[2])*" years")
 tmin_hec=p[2]
 tmax_hec=p[3]   
-plot(HEC[ind_postquake_hectore,:DATE],HEC[ind_postquake_hectore,:DVV]
--HEC[ind_postquake_hectore,:DRAINDED].-yb_hec)
+plot(HEC[:,:DATE],HEC[:,:DVV]-HEC[:,:DRAINDED].-yb_hec)
 plot!(HEC[ind_postquake_hectore,:DATE],ypredHEC)
-plot!(HEC[:,:DATE],HEC[:,:DVV]-HEC[:,:DRAINDED].-yb_hec)
+plot!(HEC[ind_postquake_hectore,:DATE],ypredHEC1)
 
+BIC_hec1 = 2 * log(length(ind_postquake_hectore))-2*log(residual_hec1)
+BIC_hec = 3 * log(length(ind_postquake_hectore))-2*log(residual_hec)
+println("Difference in BIC from adding tmin = ", string(BIC_hec-BIC_hec1))
+# because BIC from fitting tmin is less than from fitting without tmin, then tmin is preffered.
+
+
+
+#############################################
 # Ridgecrest
+
+
+function modelhealingJRC(p::AbstractArray)
+    ypred = p[1].*healing_s(tyear_jrc,p[2],p[3])#.+p[3]
+    crap=   sum(abs.(ypred .- ( JRC2[ind_postquake_ridge,:DVV]
+    -JRC2[ind_postquake_ridge,:DRAINDED].-yb_jrc)).^2 )
+        return crap
+end    
+
+
+function modelhealingJRC1(p::AbstractArray)
+    ypred = p[1].*healing_s1(tyear_jrc,p[2])#.+p[3]
+    crap=   sum(abs.(ypred .- ( JRC2[ind_postquake_ridge,:DVV]
+    -JRC2[ind_postquake_ridge,:DRAINDED].-yb_jrc)).^2 )
+        return crap
+end    
 reshealing = optimize(
         modelhealingJRC, 
         [-3.,0.,0.1],
@@ -166,7 +247,21 @@ reshealing = optimize(
         [-1.5,3.,7.],
         Fminbox(LBFGS()),
         Optim.Options(time_limit=60.0))
-p = Optim.minimizer(reshealing)
+
+# fit without tmin
+reshealing1 = optimize(
+    modelhealingJRC1, 
+    [-3.,0.1],
+    [0.,30.],
+    [-1.5,7.],
+    Fminbox(LBFGS()),
+    Optim.Options(time_limit=60.0))
+
+
+p = Optim.minimizer(reshealing) # fit with tmin
+residual_jrc = minimum(reshealing) # fit with tmin
+p1 = Optim.minimizer(reshealing1) # fit without tmin
+residual_jrc1 = minimum(reshealing1) #fit without tmin
 ypredJRC =  p[1].*healing_s(tyear_jrc,p[2],p[3])#.+p[3]        
 println("Fit for Ridgecrest returns "*string(p[2])*" years")
 plot(JRC2[ind_postquake_ridge,:DATE],JRC2[ind_postquake_ridge,:DVV]
@@ -176,6 +271,12 @@ plot!(JRC2[:,:DATE],JRC2[:,:DVV]
 -JRC2[:,:DRAINDED].-yb_jrc)
 tmin_jrc=p[2]
 tmax_jrc=p[3]
+
+BIC_jrc1 = 2 * log(length(ind_postquake_ridge))-2*log(residual_jrc1)
+BIC_jrc = 3 * log(length(ind_postquake_ridge))-2*log(residual_jrc)
+println("Difference in BIC from adding tmin = ", string(BIC_jrc-BIC_jrc1))
+# because BIC from fitting tmin is less than from fitting without tmin, then tmin is preffered.
+return
 
 # plot WES dv/V
 Ylims = (-2.0, 1.0)
@@ -312,64 +413,4 @@ Plots.annotate!(
         ),
     ),
     subplot=1,
-)
-
-# plot GPS after earthquake 
-plot!(
-    twinx(), 
-    GPS[!,:DATE], 
-    smoothEN, 
-    sharex=true, 
-    xticks=false,
-    grid=:off, 
-    ylims=(0,90),
-    linewidth=2.5,
-    c=:red,
-    alpha=0.95,
-    label="",
-    ylabel="GPS H. Displacement [mm]",
-    # yaxis=:flip,
-    # xlims=(WES[1,:DATE],WES[end,:DATE]),
-    yguidefontcolor=:red,
-    ytickfont=font(10,:red),
-    yforeground_color_axis=:red,
-)
-savefig(joinpath(@__DIR__,"../data/FINAL-FIGURES/CIWES-DVV.png"))
-
-
-
-
-# find groundwater wells nearby 
-# 344614118454101.tsv
-GWL = CSV.File(joinpath(@__DIR__,"../../data/344614118454101.tsv"),comment="#",skipto=3) |> DataFrame
-# GWL = CSV.File(joinpath(@__DIR__,"../../data/324603115480501.tsv"),comment="#",skipto=3) |> DataFrame
-dropmissing!(GWL,:lev_va) # lev_va is ft below surface
-GWL[!,:lev_va] ./= 3.28 # convert to meters 
-GWL = GWL[GWL[!,:lev_dt] .>= Date(2001),:]
-GWL = GWL[GWL[:,:lev_va ] .> 14.9,:]
-GWL[!,:lev_va] .*= -1
-
-
-# 2010 quake
-# read PGA from USGS https://earthquake.usgs.gov/earthquakes/eventpage/ci9108652/shakemap/intensity
-baja = h5open(joinpath(@__DIR__,"../data/Baja-EQ-shake.hdf"),"r") 
-arrays = read(baja,"arrays")
-PGA = arrays["imts"]["GREATER_OF_TWO_HORIZONTAL"]["PGA"]["mean"]
-PGV = arrays["imts"]["GREATER_OF_TWO_HORIZONTAL"]["PGV"]["mean"]
-# rotate array for plotting 
-PGV = Array(transpose(reverse(PGV,dims=2)))
-PGA = Array(transpose(reverse(PGA,dims=2)))
-# transform from log(PGV) to PGV 
-PGV = exp.(PGV)
-PGA = exp.(PGA)
-
-# get PGA grid spacing 
-info = read(baja,"dictionaries/info.json") |> JSON.parse
-Nlon = parse(Int,info["output"]["map_information"]["grid_points"]["longitude"])
-Nlat = parse(Int,info["output"]["map_information"]["grid_points"]["latitude"])
-latmax = parse(Float64,info["output"]["map_information"]["max"]["latitude"])
-latmin = parse(Float64,info["output"]["map_information"]["min"]["latitude"])
-lonmax = parse(Float64,info["output"]["map_information"]["max"]["longitude"])
-lonmin = parse(Float64,info["output"]["map_information"]["min"]["longitude"])
-PGAlon = range(lonmin,lonmax,length=Nlon)
-PGAlat = range(latmin,latmax,length=Nlat)
+    )
