@@ -10,6 +10,10 @@ WES = Arrow.Table(joinpath(@__DIR__,"../../data/FIT-DVV-SSE/90-DAY/CI.WES.arrow"
 HEC = Arrow.Table(joinpath(@__DIR__,"../../data/FIT-DVV-SSE/90-DAY/CI.HEC.arrow")) |> DataFrame
 JRC2 = Arrow.Table(joinpath(@__DIR__,"../../data/FIT-DVV-SSE/90-DAY/CI.JRC2.arrow")) |> DataFrame
 
+# data error:
+sigma=0.19 # standard deviation of the errors, as seen from the standard deviation of all dv/v measured earlier.
+
+
 # dates: El Cucapha
 QuakeDate0=Date(2010,4,4) # add 90 days due to the smoothing of the dv/v time series
 QuakeDate=Date(2010,4,4)+Day(90) # add 90 days due to the smoothing of the dv/v time series
@@ -140,18 +144,18 @@ function modelhealingWES1(p::AbstractArray)
 end   
 reshealing1 = optimize(
         modelhealingWES1, 
-        [-3.,0.,0.1], # lower
-        [0.,10.,30.], # upper
-        [-1.5,0.1,7.], # initial values
+        [-3.,0.1], # lower
+        [0.,30.], # upper
+        [-1.5,7.], # initial values
         Fminbox(LBFGS()),
-        Optim.Options(time_limit=120.0))
+        Optim.Options(time_limit=160.0))
 reshealing = optimize(
         modelhealingWES, 
         [-3.,0.,0.1], # lower
         [0.,10.,30.], # upper
         [-1.5,0.1,7.], # initial values
         Fminbox(LBFGS()),
-        Optim.Options(time_limit=120.0))
+        Optim.Options(time_limit=160.0))
 p1 = Optim.minimizer(reshealing1)
 p = Optim.minimizer(reshealing)
 residual_wes1=minimum(reshealing1)
@@ -165,12 +169,20 @@ plot!(WES[ind_postquake,:DATE],ypredWES)
 plot!(WES[ind_postquake,:DATE],ypredWES1)
 tmin_wes=p[2]
 tmax_wes=p[3]
-BIC_wes1 = 2 * log(length(ind_postquake))-2*log(residual_wes1)
-BIC_wes = 3 * log(length(ind_postquake))-2*log(residual_wes)
+crap1=WES[ind_postquake,:DVV]-WES[ind_postquake,:DRAINDED].-yb_wes
+# score  = kp-2 log(L), p = number of paramters, k=2 (AIC) or log(length(data)) for BIC
+LL=(-residual_wes/2/sigma^2) # log likelihood function
+LL1=(-residual_wes1/2/sigma^2) # log likelihood function
+
+BIC_wes1 = 2 * log(length(ind_postquake))-2*LL1
+BIC_wes = 3 * log(length(ind_postquake))-2*LL
+AIC_wes1 = 2 * 2 - 2*LL1
+AIC_wes =3 * 2 - 2*LL
+
 println("Difference in BIC from adding tmin = ", string(BIC_wes-BIC_wes1))
 
 ###########################################################
-# Hectore Mine
+# Hector Mine
 
 # fit without tmin
 function modelhealingHEC1(p::AbstractArray)
@@ -214,9 +226,16 @@ tmax_hec=p[3]
 plot(HEC[:,:DATE],HEC[:,:DVV]-HEC[:,:DRAINDED].-yb_hec)
 plot!(HEC[ind_postquake_hectore,:DATE],ypredHEC)
 plot!(HEC[ind_postquake_hectore,:DATE],ypredHEC1)
+crap1=WES[ind_postquake,:DVV]-HEC[ind_postquake,:DRAINDED].-yb_wes
 
-BIC_hec1 = 2 * log(length(ind_postquake_hectore))-2*log(residual_hec1)
-BIC_hec = 3 * log(length(ind_postquake_hectore))-2*log(residual_hec)
+LL=(-residual_hec/2/sigma^2) # log likelihood function
+LL1=(-residual_hec1/2/sigma^2) # log likelihood function
+
+BIC_hec1 = 2 * log(length(ind_postquake))-2*LL1
+BIC_hec = 3 * log(length(ind_postquake))-2*LL
+AIC_hec1 = 2 * 2 - 2*LL1
+AIC_hec =3 * 2 - 2*LL
+
 println("Difference in BIC from adding tmin = ", string(BIC_hec-BIC_hec1))
 # because BIC from fitting tmin is less than from fitting without tmin, then tmin is preffered.
 
@@ -246,7 +265,7 @@ reshealing = optimize(
         [0.,10.,30.],
         [-1.5,3.,7.],
         Fminbox(LBFGS()),
-        Optim.Options(time_limit=60.0))
+        Optim.Options(time_limit=160.0))
 
 # fit without tmin
 reshealing1 = optimize(
@@ -255,7 +274,7 @@ reshealing1 = optimize(
     [0.,30.],
     [-1.5,7.],
     Fminbox(LBFGS()),
-    Optim.Options(time_limit=60.0))
+    Optim.Options(time_limit=160.0))
 
 
 p = Optim.minimizer(reshealing) # fit with tmin
@@ -272,8 +291,15 @@ plot!(JRC2[:,:DATE],JRC2[:,:DVV]
 tmin_jrc=p[2]
 tmax_jrc=p[3]
 
-BIC_jrc1 = 2 * log(length(ind_postquake_ridge))-2*log(residual_jrc1)
-BIC_jrc = 3 * log(length(ind_postquake_ridge))-2*log(residual_jrc)
+crap1=JRC2[ind_postquake_ridge,:DVV]-JRC2[ind_postquake_ridge,:DRAINDED].-yb_jrc
+
+LL=(-residual_jrc/2/sigma^2) # log likelihood function
+LL1=(-residual_jrc1/2/sigma^2) # log likelihood function
+
+BIC_jrc1 = 2 * log(length(ind_postquake_ridge))-2*LL1
+BIC_jrc = 3 * log(length(ind_postquake_ridge))-2*LL
+AIC_jrc1 = 2 * 2 - 2*LL1
+AIC_jrc =3 * 2 - 2*LL
 println("Difference in BIC from adding tmin = ", string(BIC_jrc-BIC_jrc1))
 # because BIC from fitting tmin is less than from fitting without tmin, then tmin is preffered.
 return
