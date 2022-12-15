@@ -1,6 +1,11 @@
 # Clements-Denolle-2022
 Code for replication of Clements &amp; Denolle, 2022 
 
+
+If you use this software, please cite :
+Clements T, Denolle MA. "The Seismic Signature of California's Earthquakes,
+Droughts, and Floods", eartharxiv, https://doi.org/10.31223/X5RQ0G.
+
 ## Files to reproduce methods and results 
 
 1. src/01-stream-auto-corr.jl: Autocorrelation of seismic noise from California on AWS
