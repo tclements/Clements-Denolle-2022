@@ -1,10 +1,11 @@
 # Clements-Denolle-2022
-Code for replication of Clements &amp; Denolle, 2022 
 
+This collection of codes are available to reproduce the work in:
 
-If you use this software, please cite :
 Clements T, Denolle MA. "The Seismic Signature of California's Earthquakes,
 Droughts, and Floods", eartharxiv, https://doi.org/10.31223/X5RQ0G.
+
+Please cite the paper if you use the codes.
 
 ## Files to reproduce methods and results 
 
